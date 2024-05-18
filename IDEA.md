@@ -13,3 +13,18 @@ Efter x-antal turns kommer tiles börja försvinna från kartan (som man kan få
 Då resurser blir allt svårare att få tag på måste man spara mycket och göra val ifall man vill spendera de nu (och få fördel) eller spara de och överleva längre och kanske göra bättre saker med dem. 
 
 Man kan kommunicera med de old gods och be/offra saker till dem för krafter. Men de old gods har olika relations så tillfredställer man en blir en annan sur osv..
+
+
+## Map
+
+Hexagonal, but with quite small tiles. One building or unit can take up multiple tiles.
+
+Alla tiles av samma typ ger samma antal resurser, om de inte är improved
+
+Each tile is represented as one byte:
+
+En tile är en byte, där det är
+3 bits = biome
+1 bit = improved
+3 bit = rescource
+1 bit = occupied
