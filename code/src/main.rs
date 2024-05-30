@@ -2,7 +2,7 @@
 extern crate glium;
 extern crate winit;
 use util::read_model;
-use winit::{event_loop::{self, ControlFlow, EventLoop}, window::{self, Window}};
+use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Window}};
 use glium::{backend::Facade, glutin::{api::egl::display, surface::WindowSurface}, implement_vertex, Display, Surface};
 use std::time::{Duration, Instant};
 
@@ -72,11 +72,42 @@ fn main() {
 
     let hex_renderer = rendering::render::Renderer::new(hex_vert, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display).unwrap();
     let trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad, &frag_shad_2, None, &display).unwrap();
+    
     let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
+    //let mut frames = 0;
+
+    let params = glium::DrawParameters {
+        //To enable backfaceculling uncomment this
+        /* depth: glium::Depth {
+            test: glium::DepthTest::IfLess,
+            write: true,
+            .. Default::default()
+        },
+        backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise, */
+        .. Default::default()
+    };
+
+    //let mut timer = Instant::now();
     let _ = event_loop.run(move |event, window_target| {
+        /* if frames >= 10{
+            let now = Instant::now();
+            let duration = now.duration_since(timer);
+            if duration.as_millis() >= 1{
+                println!("FPS: {}", (frames*1000) / duration.as_millis());
+                frames = 0;
+                timer = Instant::now();
+            }
+        }  */
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
+            winit::event::WindowEvent::KeyboardInput { device_id:_, event, is_synthetic: _ } =>{
+                //println!("Event was: {:#?}", event);
+                //println!("Device Id was: {:#?}\n", device_id);
+                if event.physical_key == keyboard::KeyCode::Escape{
+                    window_target.exit()
+                }
+            },
             winit::event::WindowEvent::Resized(window_size) => {
                 perspective = rendering::render::calculate_perspective(window_size.into());
                 display.resize(window_size.into());
@@ -104,8 +135,8 @@ fn main() {
 
                 target.clear_color(0.0, 0.7, 0.7, 1.0);
 
-                trig_renderer.draw(&mut target, None, Some(&uniform!{matrix: obj_size, perspective: perspective}));
-                hex_renderer.draw(&mut target, None, Some(&uniform!{matrix: hex_size, perspective: perspective}));
+                trig_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: obj_size, perspective: perspective}));
+                hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
 
 
                 target.finish().unwrap();
@@ -118,5 +149,6 @@ fn main() {
             },
             _ => (),
         };
+        //frames += 1;
     });
 }
