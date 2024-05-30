@@ -6,7 +6,7 @@ use winit::window::Window; */
 
 use std::{collections::HashMap, option};
 
-use glium::{glutin::surface::WindowSurface, index::Index, uniforms::UniformsStorage, Display, DrawParameters, Frame, Program, Surface};
+use glium::{glutin::surface::WindowSurface, index::Index, uniforms::{AsUniformValue, Uniforms, UniformsStorage}, Display, DrawParameters, Frame, Program, Surface};
 
 #[derive(Copy, Clone,Debug)]
 pub struct Vertex_Simple {
@@ -63,16 +63,39 @@ impl Renderer{
             }
         }
 
-        pub fn draw(&self, frame: &mut Frame, draw_parameters: Option<&DrawParameters>){
-            let uniforms = uniform! {
-                matrix: [
-                    [0.01, 0.0, 0.0, 0.0],
-                    [0.0, 0.01, 0.0, 0.0],
-                    [0.0, 0.0, 0.01, 0.0],
-                    [ 0.0, 0.0, 0.0, 1.0f32],
-                ]
-            };
-            frame.draw(&self.vbo, &self.indicies, &self.program, &uniforms,
-                    &Default::default()).unwrap();
+        pub fn draw<T, R>(&self, frame: &mut Frame, draw_parameters: Option<&DrawParameters>, uniforms: Option<&UniformsStorage<T, R>>)
+        where
+        T: AsUniformValue,
+        R: Uniforms,
+        {
+            if uniforms.is_some(){
+                frame.draw(&self.vbo, &self.indicies, &self.program, uniforms.unwrap(),
+                draw_parameters.unwrap_or(&Default::default())).unwrap();
+            }else{
+                frame.draw(&self.vbo, &self.indicies, &self.program, &glium::uniforms::EmptyUniforms,
+                    draw_parameters.unwrap_or(&Default::default())).unwrap();
+            }
+                
         }
-    }  
+}  
+
+pub fn calculate_perspective(dim: (f32, f32)) -> [[f32; 4]; 4]{
+    let perspective = {
+        let (width, height) = dim;
+        let aspect_ratio = height as f32 / width as f32;
+        
+        let fov: f32 = std::f32::consts::PI / 3.0;
+        let zfar = 1024.0;
+        let znear = 0.1;
+    
+        let f = 1.0 / (fov / 2.0).tan();
+    
+        [
+            [f *   aspect_ratio   ,    0.0,              0.0              ,   0.0],
+            [         0.0         ,     f ,              0.0              ,   0.0],
+            [         0.0         ,    0.0,  (zfar+znear)/(zfar-znear)    ,   1.0],
+            [         0.0         ,    0.0, -(2.0*zfar*znear)/(zfar-znear),   0.0],
+        ]
+    };
+    return perspective
+}

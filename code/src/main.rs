@@ -2,8 +2,8 @@
 extern crate glium;
 extern crate winit;
 use util::read_model;
-use winit::event_loop::ControlFlow;
-use glium::{backend::Facade, glutin::surface::WindowSurface, implement_vertex, Display, Surface};
+use winit::{event_loop::{self, ControlFlow, EventLoop}, window::{self, Window}};
+use glium::{backend::Facade, glutin::{api::egl::display, surface::WindowSurface}, implement_vertex, Display, Surface};
 use std::time::{Duration, Instant};
 
 mod rendering;
@@ -26,14 +26,18 @@ fn pointy_hex_corner(center: Point, size: usize, i: i32) -> Point {
     }
 }
 
+fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
+    let event_loop = winit::event_loop::EventLoopBuilder::new().build().expect("event loop building"); 
+    event_loop.set_control_flow(ControlFlow::Poll);
+    let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new().with_title("4X4D-WIP").build(&event_loop);
+    (event_loop, window, display)
+}
 
 fn main() {
     // 1. The **winit::EventLoop** for handling events.
-    let event_loop = winit::event_loop::EventLoopBuilder::new().build().expect("event loop building");
-    // 2. Create a glutin context and glium Display
-    event_loop.set_control_flow(ControlFlow::Poll);
-    let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new().build(&event_loop);
-
+    let (event_loop, window, display) = init_window();
+    // Check if windows then: 
+    //window.set_window_icon(window_icon);
     let hex_vert = vec![
         Vertex_Simple{position: [0.0, 0.0]},
         Vertex_Simple{position: [-0.5, 1.0]},
@@ -68,12 +72,13 @@ fn main() {
 
     let hex_renderer = rendering::render::Renderer::new(hex_vert, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display).unwrap();
     let trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad, &frag_shad_2, None, &display).unwrap();
-
+    let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
     let _ = event_loop.run(move |event, window_target| {
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
             winit::event::WindowEvent::Resized(window_size) => {
+                perspective = rendering::render::calculate_perspective(window_size.into());
                 display.resize(window_size.into());
             },
             winit::event::WindowEvent::RedrawRequested => {
@@ -82,20 +87,26 @@ fn main() {
 
                 //let x_off = time.sin() * 0.5;
 
-                let uniforms = uniform! {
-                    matrix: [
-                        [0.5, 0.0, 0.0, 0.0],
-                        [0.0, 0.5, 0.0, 0.0],
-                        [0.0, 0.0, 0.0, 0.0],
-                        [ 0.0, 0.0, 0.0, 1.0f32],
-                    ]
-                };
-
                 let mut target = display.draw();
+
+                let obj_size = [
+                    [0.01, 0.0, 0.0, 0.0],
+                    [0.0, 0.01, 0.0, 0.0],
+                    [0.0, 0.0, 0.01, 0.0],
+                    [0.0, 0.0, 2.0, 1.0f32]
+                ];
+                let hex_size = [
+                    [0.025, 0.0, 0.0, 0.0],
+                    [0.0, 0.025, 0.0, 0.0],
+                    [0.0, 0.0, 0.025, 0.0],
+                    [0.0, 0.0, 2.0, 1.0f32]
+                ];
+
                 target.clear_color(0.0, 0.7, 0.7, 1.0);
 
-                hex_renderer.draw(&mut target, None);
-                trig_renderer.draw(&mut target, None);
+                trig_renderer.draw(&mut target, None, Some(&uniform!{matrix: obj_size, perspective: perspective}));
+                hex_renderer.draw(&mut target, None, Some(&uniform!{matrix: hex_size, perspective: perspective}));
+
 
                 target.finish().unwrap();
 
