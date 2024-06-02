@@ -74,7 +74,7 @@ fn main() {
     let trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad, &frag_shad_2, None, &display).unwrap();
     
     let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
-    //let mut frames = 0;
+    let mut frames:f32 = 0.0;
 
     let params = glium::DrawParameters {
         //To enable backfaceculling uncomment this
@@ -122,7 +122,7 @@ fn main() {
 
                 let obj_size = [
                     [0.01, 0.0, 0.0, 0.0],
-                    [0.0, 0.01, 0.0, 0.0],
+                    [0.0, 0.01+frames.sin(), 0.0, 0.0],
                     [0.0, 0.0, 0.01, 0.0],
                     [0.0, 0.0, 2.0, 1.0f32]
                 ];
@@ -149,6 +149,6 @@ fn main() {
             },
             _ => (),
         };
-        //frames += 1;
+        frames += 1.0;
     });
 }
