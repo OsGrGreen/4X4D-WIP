@@ -58,13 +58,13 @@ Maybe it is stupid to have each biome type have a specific focus/thing they are 
 
 (Biome: Focus)
 
-Desert: Science
-Woods: Production
-Plains: Food
-Hills: General
-Mountains: Money
-Sea: General
-Void: Nothing (if not specific faction) or maybe Faith (since the more void you control the bigger the connection with the gods)
+- Desert: Science
+- Woods: Production
+- Plains: Food
+- Hills: General
+- Mountains: Money
+- Sea: General
+- Void: Nothing (if not specific faction) or maybe Faith (since the more void you control the bigger the connection with the gods)
 ___________________________
 City: General
 Improvement: Specific
