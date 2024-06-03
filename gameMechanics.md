@@ -20,7 +20,7 @@ TODO: Make subsections from these statistics
 
 - Food
 - Production (Should be able to be saved in some way, since the name of the game is saving stuff)
-- Science
+- Science (Is science needed?)
 - Natural resources
     - Minerals
         - Iron
@@ -30,6 +30,7 @@ TODO: Make subsections from these statistics
     - Mana/Magic stuff
 - Faith/Offerings
 - Money
+- Orders (the amount of stuff you can do in a turn) (the bigger the empire, maybe you can issue fewer orders, since more bureaucracy?)
 
 Resources are gained mainly in three ways. From gathering it from tiles, from creating it in buildings and stealing it from others. 
 
