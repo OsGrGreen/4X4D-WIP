@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-glium = "*"
-winit = "*"
-image = "*"
-obj = { version = "*", features = ["genmesh"] }
+glium = "0.34.0"
+winit = "0.29.15"
+image = "0.25.1"
+obj = { version = "0.10.2", features = ["genmesh"] }
