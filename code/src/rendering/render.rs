@@ -17,11 +17,11 @@ implement_vertex!(Vertex_Simple, position);
 pub struct Renderer
     {
         // What to be rendered (Verts)
-        vbo: glium::vertex::VertexBufferAny,
+        pub vbo: glium::vertex::VertexBufferAny,
         // How to be rendered (Indicies) (Kan behöva öka från u16 till u32)
-        indicies: glium::IndexBuffer<u16>,
+        pub indicies: glium::IndexBuffer<u16>,
         // The program to render it
-        program: Program,
+        pub program: Program,
         // Specific Uniforms (Känns kanske lite svårt att spara på ett bra sätt här?)
         // Texture
 }

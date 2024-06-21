@@ -1,12 +1,14 @@
 #version 330 core
 
 in vec2 position;
+in vec2 world_position;
+in vec2 colour;
 uniform mat4 matrix;
 uniform mat4 perspective;
 
 out vec3 colPos;
 
 void main() {
-    gl_Position = perspective*matrix*vec4(position.x,position.y,0.0, 1.0);
-    colPos = mat3(matrix)*vec3(0.6, position);
+    gl_Position = perspective*matrix*vec4(position + world_position,0.0, 1.0);
+    colPos = vec3(colour,0.0);
 }
