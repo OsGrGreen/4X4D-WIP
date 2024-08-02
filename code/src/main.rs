@@ -90,22 +90,14 @@ fn main() {
     println!("Frame buffer size is: {:?}", display.get_framebuffer_dimensions().0);
 
     let mut q = -14;
-    let mut r = 15;
-    let mut max_r = 14;
+    let mut r = 14;
+    let mut max_r = 13;
     let data = (0..96 * 54)
         .map(|_| {
             let s = -q-r;
+            
             let mut coords = layout.hex_to_pixel(&Hex::new(q, r, s));
-            if q < 14{
-                q += 1;
-                if q % 2 == 0 && r > -13{
-                    r -= 1;
-                }
-            }else if max_r > 0{
-                q = -14;
-                r = max_r;
-                max_r -= 1;
-            }
+
             let mut colorX = 0.0;
             let mut colorY = 0.0;
             if q == 0 && r == 0 {
@@ -118,8 +110,19 @@ fn main() {
                 colorY = ((r+14) as f32/28.0);
             }
 
+            if q < 15{
+                q += 1;
+                if q % 2 == 0 && r > -14{
+                    r -= 1;
+                }
+            }else if max_r > -1{
+                q = -14;
+                r = max_r;
+                max_r -= 1;
+            }
+
             Attr {
-                world_position: [coords.x, coords.y-layout.size.y*2.0],
+                world_position: [coords.x, coords.y],
                 colour: [colorX,colorY],
             }
         })
@@ -130,7 +133,7 @@ fn main() {
     let frac_hex = layout.pixel_to_hex(&mouse_pos);
     let clicked_hex = frac_hex.hex_round();
     println!("Clicked hex is: {:#?}", clicked_hex);
-    println!("Hex 1, -1 is at pixel: {:#?}", layout.hex_to_pixel(&Hex::new(1,-1,0)));
+    println!("Hex 1, -1 is at pixel: {:#?}", layout.hex_to_pixel(&Hex::new(0,0,0)));
     println!("Dimension is: {:#?}", window.inner_size());
     println!("Scale factors are: {} and {}", width_scale, height_scale);
     //println!("{:#?}", per_instance);
