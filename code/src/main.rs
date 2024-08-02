@@ -2,13 +2,13 @@
 extern crate glium;
 extern crate winit;
 use util::read_model;
-use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Window}};
+use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::Facade, glutin::{api::egl::display, surface::WindowSurface}, implement_vertex, Display, Surface};
-use world::layout::Point;
-use std::time::{Duration, Instant};
+use world::{hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point}};
+use std::{alloc::Layout, io::stdout, time::{Duration, Instant}};
 
 mod rendering;
-use rendering::render::Vertex_Simple;
+use rendering::render::{array_to_VBO, Vertex_Simple};
 
 mod util;
 
@@ -44,32 +44,24 @@ fn main() {
     let (event_loop, window, display) = init_window();
     // Check if windows then: 
     //window.set_window_icon(window_icon);
-    let hex_vert = vec![
-        Vertex_Simple{position: [0.0, 0.0]},
-        Vertex_Simple{position: [-0.5, 1.0]},
-        Vertex_Simple{position: [0.5, 1.0]},
-        Vertex_Simple{position: [1.0, 0.0]},
-        Vertex_Simple{position: [0.5, -1.0]},
-        Vertex_Simple{position: [-0.5, -1.0]},
-        Vertex_Simple{position: [-1.0, 0.0]},
-    ];
+    let monitor_handle = window.primary_monitor();
+    let std_width = 800.0;
+    let std_height = 480.0;
+    window.set_fullscreen(Some(Fullscreen::Borderless(monitor_handle)));
+    let mut width_scale:f64 = window.inner_size().width as f64 / std_width;
+    let mut height_scale:f64 = window.inner_size().height as f64 / std_height;
 
-    let hex_indecies: [u16; 18] = [ 
-        0, 1, 2,
-        0, 2, 3,
-        0, 3, 4,
-        0, 4, 5,
-        0, 5, 6,
-        0, 6, 1];
 
+    let hex_scale: f32 = 0.005;
+    let hex_size = 0.1;
+
+    let hex = Hex::new(0, 0, 0);
+    let layout = Hex_Layout::new_flat(Point{x:hex_size/hex_scale,y:(hex_size)/hex_scale},Point{x:0.0,y:0.0});
+    let corners = layout.polygon_corners(&hex); 
+
+    let hex_vert_2 = array_to_VBO(corners);
     let hex_indecies_fan: [u16; 8] = [ 
         0, 1, 2, 3, 4 , 5, 6, 1];
-
-    let shape: Vec<Vertex_Simple> = vec![
-        Vertex_Simple { position: [0.25, 0.25] },
-        Vertex_Simple { position: [ 0.0,  -0.5] },
-        Vertex_Simple { position: [ -0.5, 0.0] },
-        ];
 
     let cup_verts = util::read_model("./models/hex.obj");
     let vert_shad = util::read_shader("./shaders/vert1.4s");
@@ -77,7 +69,7 @@ fn main() {
     let frag_shad_1 = util::read_shader("./shaders/frag1.4s");
     let frag_shad_2 = util::read_shader("./shaders/frag2.4s");
 
-    let hex_renderer = rendering::render::Renderer::new(hex_vert, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display).unwrap();
+    let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display).unwrap();
     let trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display).unwrap();
     
     let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
@@ -94,38 +86,53 @@ fn main() {
         .. Default::default()
     };
 
-    let hex_size = 1.5;
     println!("Window size is: {:?}", window.inner_size().width);
     println!("Frame buffer size is: {:?}", display.get_framebuffer_dimensions().0);
-    let mut x: f32 = -80.0;
-    let mut last_start = x - hex_size;
-    let mut change_row = false;
-    let mut y: f32 = 0.0;
+
+    let mut q = -14;
+    let mut r = 15;
+    let mut max_r = 14;
     let data = (0..96 * 54)
         .map(|_| {
-            x += hex_size*2.0;
-            if x >= window.inner_size().width as f32 / 10.0 {
-                if change_row == false {
-                    x = last_start + hex_size;
-                    last_start = last_start - hex_size;
-                    change_row = true;
-                }else{
-                    x = last_start + hex_size;
-                    last_start = last_start + hex_size;
-                    change_row = false;
+            let s = -q-r;
+            let mut coords = layout.hex_to_pixel(&Hex::new(q, r, s));
+            if q < 14{
+                q += 1;
+                if q % 2 == 0 && r > -13{
+                    r -= 1;
                 }
-                y -= 1.15   ;
+            }else if max_r > 0{
+                q = -14;
+                r = max_r;
+                max_r -= 1;
             }
-            //println!("x is {}", x);
+            let mut colorX = 0.0;
+            let mut colorY = 0.0;
+            if q == 0 && r == 0 {
+                colorX = 1.0;
+                colorY = 1.0;
+                println!("Size is: {:#?}", layout.size);
+                println!("Coords are: {:#?}", coords);
+            }else{
+                colorX = ((q+14) as f32/28.0);
+                colorY = ((r+14) as f32/28.0);
+            }
+
             Attr {
-                world_position: [x, y+45.0],
-                colour: [0.0, (x+80.0)/160.0],
+                world_position: [coords.x, coords.y-layout.size.y*2.0],
+                colour: [colorX,colorY],
             }
         })
         .collect::<Vec<_>>();
-
+    println!("{:#?}", data[0]);
     let per_instance = glium::vertex::VertexBuffer::persistent(&display, &data).unwrap();
-    
+    let mut mouse_pos: Point = Point{x:30.0,y:17.0};
+    let frac_hex = layout.pixel_to_hex(&mouse_pos);
+    let clicked_hex = frac_hex.hex_round();
+    println!("Clicked hex is: {:#?}", clicked_hex);
+    println!("Hex 1, -1 is at pixel: {:#?}", layout.hex_to_pixel(&Hex::new(1,-1,0)));
+    println!("Dimension is: {:#?}", window.inner_size());
+    println!("Scale factors are: {} and {}", width_scale, height_scale);
     //println!("{:#?}", per_instance);
             
     //let mut timer = Instant::now();
@@ -142,6 +149,18 @@ fn main() {
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
+            winit::event::WindowEvent::CursorMoved { device_id, position } => {
+                mouse_pos.x = ((position.x as f32) - window.inner_size().width as f32/2.0)/width_scale as f32;
+                mouse_pos.y = ((-position.y as f32) + window.inner_size().height as f32/2.0)/height_scale as f32;
+                //println!("Mouse posistion became {:#?}", mouse_pos);
+            }
+            winit::event::WindowEvent::MouseInput { device_id, state, button } =>{
+                println!("Clicked {:#?}", mouse_pos);
+                //println!("Dimension is: {:#?}", window.inner_size());
+                let frac_hex = layout.pixel_to_hex(&mouse_pos);
+                let clicked_hex = frac_hex.hex_round();
+                println!("Clicked hex is: {:#?}", clicked_hex);
+            }
             winit::event::WindowEvent::KeyboardInput { device_id:_, event, is_synthetic: _ } =>{
                 //println!("Event was: {:#?}", event);
                 //println!("Device Id was: {:#?}\n", device_id);
@@ -152,6 +171,9 @@ fn main() {
             winit::event::WindowEvent::Resized(window_size) => {
                 perspective = rendering::render::calculate_perspective(window_size.into());
                 display.resize(window_size.into());
+                width_scale = window_size.width as f64/ std_width;
+                height_scale = window_size.height as f64/ std_height;
+                println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
 
@@ -168,15 +190,15 @@ fn main() {
                     [0.0, 0.0, 2.0, 1.0f32]
                 ];
                 let hex_size = [
-                    [0.025, 0.0, 0.0, 0.0],
-                    [0.0, 0.025, 0.0, 0.0],
-                    [0.0, 0.0, 0.025, 0.0],
+                    [1.0*hex_scale, 0.0, 0.0, 0.0],
+                    [0.0, 1.0*hex_scale, 0.0, 0.0],
+                    [0.0, 0.0, 1.0*hex_scale, 0.0],
                     [0.0, 0.0, 2.0, 1.0f32]
                 ];
 
                 target.clear_color(0.0, 0.7, 0.7, 1.0);
 
-                trig_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: obj_size, perspective: perspective}));
+                //trig_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: obj_size, perspective: perspective}));
                 target.draw(
                     (&hex_renderer.vbo, per_instance.per_instance().unwrap()),
                     &hex_renderer.indicies,

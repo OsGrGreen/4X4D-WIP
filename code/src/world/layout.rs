@@ -33,25 +33,33 @@ pub struct Point {
 // See notes for the implementation design: https://www.redblobgames.com/grids/hexagons/implementation.html
 // Possibly have vectors/matricies and use multiplication
 #[derive(Copy, Clone,Debug)]
-pub struct Layout{
+pub struct Hex_Layout{
     orientation: Orientation,
-    size: Point,
+    pub size: Point,
     origin: Point
 }
 
-impl Layout {
+impl Hex_Layout {
     
-    pub const fn new(ori:Orientation,size:Point,origin:Point) -> Layout{
-        Layout { orientation: ori, size: size, origin: origin }
+    pub const fn new(ori:Orientation,size:Point,origin:Point) -> Hex_Layout{
+        Hex_Layout { orientation: ori, size: size, origin: origin }
     }
 
-    pub fn hex_to_pixel(&self,h:Hex) -> Point{
+    pub fn new_flat(size:Point,origin:Point) -> Hex_Layout{
+        Hex_Layout { orientation: layout_flat, size: size, origin: origin }
+    }
+
+    pub fn new_pointy(size:Point,origin:Point) -> Hex_Layout{
+        Hex_Layout { orientation: layout_pointy, size: size, origin: origin }
+    }
+
+    pub fn hex_to_pixel(&self,h:&Hex) -> Point{
         let x:f32 = (self.orientation.f0*h.get_q() as f32+self.orientation.f1*h.get_r() as f32) * self.size.x;
         let y:f32 = (self.orientation.f2*h.get_q() as f32+self.orientation.f3*h.get_r() as f32) * self.size.y;
         Point { x: x+self.origin.x, y: y+self.origin.y }
     }
 
-    pub fn pixel_to_hex(&self,p:Point) -> FractionalHex{
+    pub fn pixel_to_hex(&self,p:&Point) -> FractionalHex{
         //Point pt = Point((p.x - layout.origin.x) / layout.size.x, (p.y - layout.origin.y) / layout.size.y);
         let pt: Point = Point{x:(p.x-self.origin.x)/self.size.x, y:(p.y-self.origin.y)/self.size.y};
         let q: f32 = self.orientation.b0*pt.x + self.orientation.b1*pt.y; 
@@ -60,11 +68,11 @@ impl Layout {
     }
 
     pub fn hex_corner_offset(&self, corner:u8) -> Point{
-        let angle: f32 = 2.0*std::f32::consts::PI*(self.orientation.start_angle+corner)/6.0;
+        let angle: f32 = 2.0*std::f32::consts::PI*(self.orientation.start_angle+corner as f32)/6.0;
         return Point{x:self.size.x*angle.cos(),y:self.size.y*angle.sin()}
     }
 
-    pub fn polygon_corners(&self, h:Hex) -> Vec<Point>{
+    pub fn polygon_corners(&self, h:&Hex) -> Vec<Point>{
         let mut corners: Vec<Point> = vec![];
 
         let center: Point = self.hex_to_pixel(h);

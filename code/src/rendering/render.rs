@@ -8,6 +8,8 @@ use std::{collections::HashMap, option};
 
 use glium::{glutin::surface::WindowSurface, index::Index, uniforms::{AsUniformValue, Uniforms, UniformsStorage}, Display, DrawParameters, Frame, Program, Surface};
 
+use crate::world::layout::Point;
+
 #[derive(Copy, Clone,Debug)]
 pub struct Vertex_Simple {
     pub position: [f32; 2],
@@ -98,4 +100,16 @@ pub fn calculate_perspective(dim: (f32, f32)) -> [[f32; 4]; 4]{
         ]
     };
     return perspective
+}
+
+pub fn point_to_vertex_simple(p: Point) -> Vertex_Simple{
+    return Vertex_Simple{position: [p.x, p.y]}
+}
+
+pub fn array_to_VBO(points: Vec<Point>) -> Vec<Vertex_Simple>{
+    let mut output: Vec<Vertex_Simple> = vec![];
+    for p in points{
+        output.push(point_to_vertex_simple(p));
+    }
+    return output
 }
