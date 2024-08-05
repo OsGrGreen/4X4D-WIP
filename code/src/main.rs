@@ -4,8 +4,8 @@ extern crate winit;
 use util::{input_handler, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
-use world::{draw_functions, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point}, world_camera::WorldCamera};
-use std::{alloc::Layout, io::stdout, time::{Duration, Instant}};
+use world::{draw_functions, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point}, tile::Tile, world_camera::WorldCamera};
+use std::{alloc::Layout, io::stdout, mem::{self, size_of}, time::{Duration, Instant}};
 
 mod rendering;
 use rendering::render::{array_to_VBO, Vertex_Simple};
@@ -40,6 +40,18 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
 }
 
 fn main() {
+
+    let x = Tile::new(0, 3);
+    println!("Biome is: {}", x.get_biome());
+    println!("Improved is: {}", x.get_improved());
+    println!("Resource is: {}", x.get_resource());
+    println!("Occupied is: {}", x.get_occupied());
+
+
+    if true{
+        return;
+    }
+
     // 1. The **winit::EventLoop** for handling events.
     let (event_loop, window, display) = init_window();
     // Check if windows then: 
@@ -246,7 +258,7 @@ fn main() {
                     [0.0, 0.0, 2.0, 1.0f32]
                 ];
 
-                target.clear_color(0.0, 0.7, 0.7, 1.0);
+                target.clear_color(0.1, 0.4, 0.2, 1.0);
 
                 //trig_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: obj_size, perspective: perspective}));
                 target.draw(

@@ -10,7 +10,7 @@ impl WorldCamera{
     }
 
     pub fn move_camera(&mut self, move_x:u64, move_y:u64){
-
+        
     } 
 
     pub fn offsets(&self) -> (u64,u64){

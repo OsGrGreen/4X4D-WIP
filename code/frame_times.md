@@ -15,6 +15,6 @@ the time is spent:
 **GOAL** = <16 ms
 
 - Rendering => 0 - 1 ms 
-- Updating user input => ~= 3 ms
+- Updating user input => ~= 3-4 ms
 
-- **Total** = <4 ms
+- **Total** = <4-5 ms
