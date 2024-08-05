@@ -1,10 +1,10 @@
 #[macro_use]
 extern crate glium;
 extern crate winit;
-use util::read_model;
+use util::{input_handler, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
-use glium::{backend::Facade, glutin::{api::egl::display, surface::WindowSurface}, implement_vertex, Display, Surface};
-use world::{hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point}};
+use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
+use world::{draw_functions, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point}, world_camera::WorldCamera};
 use std::{alloc::Layout, io::stdout, time::{Duration, Instant}};
 
 mod rendering;
@@ -53,11 +53,12 @@ fn main() {
 
 
     let hex_scale: f32 = 0.005;
-    let hex_size = 0.1;
+    let hex_size = 0.04;
 
     let hex = Hex::new(0, 0, 0);
     let layout = Hex_Layout::new_flat(Point{x:hex_size/hex_scale,y:(hex_size)/hex_scale},Point{x:0.0,y:0.0});
     let corners = layout.polygon_corners(&hex); 
+    let world_camera = WorldCamera::new();
 
     let hex_vert_2 = array_to_VBO(corners);
     let hex_indecies_fan: [u16; 8] = [ 
@@ -89,10 +90,22 @@ fn main() {
     println!("Window size is: {:?}", window.inner_size().width);
     println!("Frame buffer size is: {:?}", display.get_framebuffer_dimensions().0);
 
-    let mut q = -14;
-    let mut r = 14;
-    let mut max_r = 13;
-    let data = (0..96 * 54)
+    let neededHexesX = ((800.0) / (2.0*(layout.size.x))) as i32;
+    let neededHexesY = ((480.0) / (layout.size.y)) as i32;
+    //let neededHexesX = 20;
+    //let neededHexesY = 24;
+    let mut q = -neededHexesX;
+    let mut r = neededHexesY;
+    let mut max_r = neededHexesY-1;
+    let mut amount_of_hexes = 0;
+    println!("Needed hexes are {:#?}, {:#?}", neededHexesX, neededHexesY);
+
+    //TODO
+    // Make this map prettier so that we know excatly how many time we need to iterate¨
+    // And so that we do not store the same thing twice...
+    let mut color1: Vec<[f32;2]> = vec![];
+    let mut color2: Vec<[f32;2]> = vec![];
+    let data = (0..(neededHexesX*neededHexesY*2) as usize)
         .map(|_| {
             let s = -q-r;
             
@@ -106,29 +119,51 @@ fn main() {
                 println!("Size is: {:#?}", layout.size);
                 println!("Coords are: {:#?}", coords);
             }else{
-                colorX = ((q+14) as f32/28.0);
-                colorY = ((r+14) as f32/28.0);
+                colorX = ((q+20) as f32/40.0);
+                colorY = ((r+20) as f32/40.0);
             }
 
-            if q < 15{
+            if q < neededHexesX+1{
                 q += 1;
-                if q % 2 == 0 && r > -14{
+                if q % 2 == 0 && r > -neededHexesY{
                     r -= 1;
                 }
+                amount_of_hexes += 1;
             }else if max_r > -1{
-                q = -14;
+                q = -neededHexesX;
                 r = max_r;
                 max_r -= 1;
+                amount_of_hexes += 1;
             }
-
+            color1.push([colorX,colorY]);
+            color2.push([colorY,colorX]);
             Attr {
                 world_position: [coords.x, coords.y],
                 colour: [colorX,colorY],
             }
         })
         .collect::<Vec<_>>();
+
+    /* let mut amountOfSame = 0;
+    let mut pos1 = 0;
+    let mut pos2 = 0;
+    for attr1 in &data{
+        for attr2 in &data{
+            if attr1.world_position == attr2.world_position{
+                amountOfSame += 1;
+            }
+            pos2 += 1;
+        }
+        pos1 += 1;
+        pos2 = 0;
+    }*/
     println!("{:#?}", data[0]);
-    let per_instance = glium::vertex::VertexBuffer::persistent(&display, &data).unwrap();
+    println!("Amount of true hexes are: {:#?}", amount_of_hexes);
+    //println!("Amount of same hexes: {:#?}", amountOfSame);
+
+    // Maybe try to have a double buffer of some kind..
+    // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
+    let mut per_instance = glium::vertex::VertexBuffer::persistent(&display, &data).unwrap();
     let mut mouse_pos: Point = Point{x:30.0,y:17.0};
     let frac_hex = layout.pixel_to_hex(&mouse_pos);
     let clicked_hex = frac_hex.hex_round();
@@ -137,24 +172,25 @@ fn main() {
     println!("Dimension is: {:#?}", window.inner_size());
     println!("Scale factors are: {} and {}", width_scale, height_scale);
     //println!("{:#?}", per_instance);
-            
-    //let mut timer = Instant::now();
+
+    let mut what_color:bool = false;
+
+    let mut timer = Instant::now();
     let _ = event_loop.run(move |event, window_target| {
-        /* if frames >= 10{
-            let now = Instant::now();
-            let du  ration = now.duration_since(timer);
-            if duration.as_millis() >= 1{
-                println!("FPS: {}", (frames*1000) / duration.as_millis());
-                frames = 0;
-                timer = Instant::now();
-            }
-        }  */
+        let now = Instant::now();
+        let duration = now.duration_since(timer);
+        if duration.as_millis() >= 1{
+            //println!("FPS: {}", (frames*1000.0) / duration.as_millis() as f32);
+            frames = 0.0;
+            timer = Instant::now();
+        }
+    
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
             winit::event::WindowEvent::CursorMoved { device_id, position } => {
-                mouse_pos.x = ((position.x as f32) - window.inner_size().width as f32/2.0)/width_scale as f32;
-                mouse_pos.y = ((-position.y as f32) + window.inner_size().height as f32/2.0)/height_scale as f32;
+                mouse_pos.x = ((position.x as f32) - window.inner_size().width as f32/2.0 - world_camera.offsets().0 as f32)/width_scale as f32;
+                mouse_pos.y = ((-position.y as f32) + window.inner_size().height as f32/2.0 + world_camera.offsets().0 as f32)/height_scale as f32;
                 //println!("Mouse posistion became {:#?}", mouse_pos);
             }
             winit::event::WindowEvent::MouseInput { device_id, state, button } =>{
@@ -164,11 +200,22 @@ fn main() {
                 let clicked_hex = frac_hex.hex_round();
                 println!("Clicked hex is: {:#?}", clicked_hex);
             }
-            winit::event::WindowEvent::KeyboardInput { device_id:_, event, is_synthetic: _ } =>{
-                //println!("Event was: {:#?}", event);
-                //println!("Device Id was: {:#?}\n", device_id);
-                if event.physical_key == keyboard::KeyCode::Escape{
-                    window_target.exit()
+            winit::event::WindowEvent::KeyboardInput { device_id, event, is_synthetic: _ } =>{
+                if !event.state.is_pressed(){
+                    //If escape is pressed, then exit
+                    if event.physical_key == keyboard::KeyCode::Escape{
+                        window_target.exit()
+                    }
+                    let dur1 = Instant::now();
+                    if what_color{
+                        draw_functions::update_hex_map_colors(&mut per_instance, &color1);
+                        what_color = !what_color;
+                    }else {
+                        draw_functions::update_hex_map_colors(&mut per_instance, &color2);
+                        what_color = !what_color;
+                        
+                    }
+                    println!("Time for updating hexes are: {}", dur1.elapsed().as_millis());
                 }
             },
             winit::event::WindowEvent::Resized(window_size) => {
@@ -179,7 +226,7 @@ fn main() {
                 println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
-
+                let dur2 = Instant::now();
                 //time += 0.02;
 
                 //let x_off = time.sin() * 0.5;
@@ -213,7 +260,7 @@ fn main() {
 
 
                 target.finish().unwrap();
-
+                println!("Time for drawing frame: {}", dur2.elapsed().as_millis());
             },
             _ => (),
             },

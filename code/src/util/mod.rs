@@ -6,6 +6,7 @@ use crate::rendering::render::Vertex_Simple;
 use std::io::BufReader;
 
 mod model_reader;
+pub mod input_handler;
 
 pub fn read_shader(file_path: &str) -> String{
 
