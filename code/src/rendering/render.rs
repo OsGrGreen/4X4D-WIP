@@ -16,6 +16,13 @@ pub struct Vertex_Simple {
 }
 implement_vertex!(Vertex_Simple, position);
 
+#[derive(Copy, Clone,Debug)]
+pub struct Vertex {
+    pub position: [f32; 3],
+    pub normal: [f32; 3],
+}
+implement_vertex!(Vertex, position,normal);
+
 pub struct Renderer
     {
         // What to be rendered (Verts)
@@ -29,7 +36,7 @@ pub struct Renderer
 }
 
 impl Renderer{
-        pub fn new<'a>(shape: Vec<Vertex_Simple>, inds: Vec<u16>, prim_type: Option<glium::index::PrimitiveType> ,vert_shader: &'a str, frag_shader: &'a str, geo_shader: Option<&'a str>, disp: &Display<WindowSurface>) -> Result<Renderer, &'a str>{
+        pub fn new<'a>(shape: Vec<Vertex>, inds: Vec<u16>, prim_type: Option<glium::index::PrimitiveType> ,vert_shader: &'a str, frag_shader: &'a str, geo_shader: Option<&'a str>, disp: &Display<WindowSurface>) -> Result<Renderer, &'a str>{
             let shape_len = shape.len();
 
             let vbo = glium::VertexBuffer::new(disp, &shape).unwrap();
@@ -102,14 +109,14 @@ pub fn calculate_perspective(dim: (f32, f32)) -> [[f32; 4]; 4]{
     return perspective
 }
 
-pub fn point_to_vertex_simple(p: Point) -> Vertex_Simple{
-    return Vertex_Simple{position: [p.x, p.y]}
+pub fn point_to_Vertex(p: Point) -> Vertex{
+    return Vertex{position: [p.x, p.y, 0.0], normal: [0.0,0.0,0.0]}
 }
 
-pub fn array_to_VBO(points: Vec<Point>) -> Vec<Vertex_Simple>{
-    let mut output: Vec<Vertex_Simple> = vec![];
+pub fn array_to_VBO(points: Vec<Point>) -> Vec<Vertex>{
+    let mut output: Vec<Vertex> = vec![];
     for p in points{
-        output.push(point_to_vertex_simple(p));
+        output.push(point_to_Vertex(p));
     }
     return output
 }

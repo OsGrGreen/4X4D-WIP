@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::BufRead;
+use crate::rendering::render::Vertex;
 use crate::rendering::render::Vertex_Simple;
 use std::io::BufReader;
 
@@ -16,13 +17,13 @@ pub fn read_shader(file_path: &str) -> String{
     return contents
 }
 
-pub fn read_model(file_path: &str) -> Vec<Vertex_Simple>{
+pub fn read_model(file_path: &str) -> Vec<Vertex>{
 
     let file = File::open(file_path).expect("Could not find model file");
     let mut data = ::std::io::BufReader::new(file);
     let data = obj::ObjData::load_buf(&mut data).unwrap();
 
-    let mut vertex_data = Vec::new();
+    let mut vertex_data:Vec<Vertex> = Vec::new();
 
     for object in data.objects.iter() {
         for polygon in object.groups.iter().flat_map(|g| g.polys.iter()) {
@@ -36,9 +37,9 @@ pub fn read_model(file_path: &str) -> Vec<Vertex_Simple>{
                         let _texture = texture.unwrap_or([0.0, 0.0]);
                         let _normal = normal.unwrap_or([0.0, 0.0, 0.0]);
                         
-                        vertex_data.push(Vertex_Simple {
-                            position:[position[0], position[1]],
-                            //normal,
+                        vertex_data.push(Vertex{
+                            position:position,
+                            normal: normal.unwrap_or([0.0,0.0,0.0]),
                             //texture,
                         })
                     }
@@ -46,7 +47,5 @@ pub fn read_model(file_path: &str) -> Vec<Vertex_Simple>{
             }
         }
     }
-
-
     vertex_data
 }

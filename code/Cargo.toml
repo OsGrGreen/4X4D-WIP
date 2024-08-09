@@ -9,4 +9,5 @@ edition = "2021"
 glium = "0.34.0"
 winit = "0.29.15"
 image = "0.25.1"
+glam = "0.28.0"
 obj = { version = "0.10.2", features = ["genmesh"] }

@@ -3,7 +3,7 @@ use crate::Attr;
 
 
 //Make this slightly more efficient...
-pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, new_colors: &Vec<[f32; 2]>) {
+pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, new_colors: &Vec<[f32; 3]>) {
     let vertex_copy = vertex_buffer.read().unwrap();
     let mut mapping = vertex_buffer.map_write();
     

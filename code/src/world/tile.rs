@@ -30,13 +30,16 @@ impl Tile{
     }
 
     pub fn set_improved(&mut self, improved: u8){
-        self.information = (self.information & 31) | ((improved & 1) << 4);    }
+        self.information = (self.information & 239) | ((improved & 1) << 4);
+    }
 
     pub fn set_resource(&mut self, resource: u8){
         assert!(resource < 8);
-        self.information = (self.information & 31) | (resource << 1);    }
+        self.information = (self.information & 241) | (resource << 1);
+    }
 
     pub fn set_occupied(&mut self, occupied: u8){
-        self.information = (self.information & 0) | (occupied & 1);    }
+        self.information = (self.information & 254) | (occupied & 1);
+    }
 
 }
