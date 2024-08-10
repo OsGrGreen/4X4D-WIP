@@ -7,7 +7,7 @@ use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self,
 use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
 use world::{draw_functions, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point}, tile::Tile, world_camera::WorldCamera};
 use std::{alloc::Layout, io::stdout, mem::{self, size_of}, time::{Duration, Instant}};
-
+use glium::PolygonMode::Line;
 mod rendering;
 use rendering::{render::{array_to_VBO, Vertex_Simple}, render_camera::{self, RenderCamera}};
 
@@ -43,7 +43,13 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
 fn main() {
 
     //let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,0.5), Vec3::new(0.0,0.0,0.0));
-    let mut camera_matrix = RenderCamera::look_at_glm(Vec3::new(0.0,0.0,4.0), Vec3::new(0.0,0.0,0.0),Vec3::new(0.0,1.0,0.0));
+    let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,4.5), Vec3::new(0.0,0.0,0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0,0.0,-1.0));
+
+    //Camera constants
+
+    const CAMERA_SPEED:f32 = 0.005;
+
+    let mut camera_matrix: glam::Mat4 = camera.look_at(camera.get_pos()+camera.get_front());
     //println!("camera matrix glm is {:#?}", RenderCamera::look_at_glm(Vec3::new(2.0,-1.0,1.0), Vec3::new(-2.0,1.0,1.0),Vec3::new(0.0,1.0,0.0)));
     println!("camera matrix is: {:#?}", camera_matrix);
     // 1. The **winit::EventLoop** for handling events.
@@ -115,6 +121,8 @@ fn main() {
 
     let mut color1: Vec<[f32;3]> = vec![];
     let mut color2: Vec<[f32;3]> = vec![];
+    let mut color_x2 = 0.0;
+    let mut color_y2 = 1.0;
     let data = (0..(needed_hexes_x*needed_hexes_y*2) as usize)
         .map(|_| {
             let s = -q-r;
@@ -133,6 +141,19 @@ fn main() {
                 color_y = (r+20) as f32/40.0;
             }
 
+            if q % 2 == 0 && color_x2 == 1.0{
+                color_x2 = 0.0;
+            }else if q % 2 == 0 {
+                color_x2 = 1.0;
+            }
+
+            if r % 2 == 0 && color_y2 == 1.0{
+                color_y2 = 0.0;
+            }else if r % 2 == 0{
+                color_y2 = 1.0;
+            }
+
+
             if q < needed_hexes_x+1{
                 q += 1;
                 if q % 2 == 0 && r > -needed_hexes_y{
@@ -149,7 +170,7 @@ fn main() {
             color2.push([color_y,color_x, 1.0]);
             Attr {
                 world_position: [coords.x, coords.y, -1.0],
-                colour: [color_x,color_y, 1.0],
+                colour: [0.0,0.0, 0.0],
             }
         })
         .collect::<Vec<_>>();
@@ -185,10 +206,10 @@ fn main() {
             timer = Instant::now();
         }*/
 
-        let camX = (timer.elapsed().as_millis() as f32 / 1000.0).sin()*radius;
-        let camZ = (timer.elapsed().as_millis() as f32 / 1000.0).cos()*radius;
+        //let camX = (timer.elapsed().as_millis() as f32 / 1000.0).sin()*radius;
+        //let camZ = (timer.elapsed().as_millis() as f32 / 1000.0).cos()*radius;
         //println!("CamX is {}, camZ is: {}", camX, camZ);
-        camera_matrix = RenderCamera::look_at_glm(Vec3::new(camX,0.0,camZ), Vec3::new(0.0,0.0,0.0),Vec3::new(0.0,1.0,0.0));
+        //camera_matrix = RenderCamera::look_at_glm(Vec3::new(camX,0.0,camZ), Vec3::new(0.0,0.0,0.0),Vec3::new(0.0,1.0,0.0));
 
     
         //let mut change_x = 0.0;
@@ -217,26 +238,40 @@ fn main() {
             // TODO
             // Make input a little bit nicer
             winit::event::WindowEvent::KeyboardInput { device_id, event, is_synthetic: _ } =>{
-                if !event.state.is_pressed() && !event.repeat{
                     //If escape is pressed, then exit
-                    println!("Pressed button is: {:#?}", event.physical_key);
-                    if event.physical_key == keyboard::KeyCode::Escape{
+                println!("Pressed button is: {:#?}", event.physical_key);
+                if event.physical_key == keyboard::KeyCode::Escape{
                         window_target.exit()
-                    }
-                    else if event.physical_key == keyboard::KeyCode::KeyW{
+                } 
+                
 
-                    }
-                    let dur1 = Instant::now();
-                    if what_color{
-                        draw_functions::update_hex_map_colors(&mut per_instance, &color1);
-                        what_color = !what_color;
-                    }else {
-                        draw_functions::update_hex_map_colors(&mut per_instance, &color2);
-                        what_color = !what_color;
-                        
-                    }
-                    println!("Time for updating hexes are: {}", dur1.elapsed().as_millis());
+                //Change camera_speed to delta time...
+                //Restart camera every 0.1 x (and y probably)
+                // Should be able to move X and Y seperatly. 
+                //When passing X limit, change to -X Limit
+                //When passing Y limit change to -Y Limit
+                if event.physical_key == keyboard::KeyCode::KeyW{
+                        camera.r#move(CAMERA_SPEED*camera.get_front());
+                        camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                } if event.physical_key == keyboard::KeyCode::KeyS{
+                        camera.r#move(-CAMERA_SPEED*camera.get_front());
+                        camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                } if event.physical_key == keyboard::KeyCode::KeyA{
+                        camera.r#move(-CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
+                        let x_pos = camera.get_pos()[0];
+                        if x_pos < -0.12{
+                            camera.set_x(0.0);
+                        }
+                        camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                }if event.physical_key == keyboard::KeyCode::KeyD{
+                        camera.r#move(CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
+                        let x_pos = camera.get_pos()[0];
+                        if x_pos > 0.12{
+                            camera.set_x(0.0);
+                        }
+                        camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                 }
+                println!("Camera is: {}", camera.get_pos());
             },
             winit::event::WindowEvent::Resized(window_size) => {
                 perspective = rendering::render::calculate_perspective(window_size.into());
@@ -273,14 +308,22 @@ fn main() {
                     &hex_renderer.indicies,
                     &hex_renderer.program,
                     &uniform! { model: hex_size, projection: perspective, view:camera_matrix.to_cols_array_2d()},
-                    &Default::default(),
+                    &glium::DrawParameters {
+                        depth: glium::Depth {
+                            test: glium::DepthTest::IfLess,
+                            write: true,
+                            .. Default::default()
+                        },
+                        polygon_mode: Line,
+                        .. Default::default()
+                    },
                 ).unwrap();
-                trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera_matrix.to_cols_array_2d(), u_light:light}));
+                //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera_matrix.to_cols_array_2d(), u_light:light}));
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
 
 
                 target.finish().unwrap();
-                println!("Time for drawing frame: {}", dur2.elapsed().as_millis());
+                //println!("Time for drawing frame: {}", dur2.elapsed().as_millis());
             },
             _ => (),
             },
