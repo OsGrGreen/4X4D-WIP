@@ -17,7 +17,7 @@ impl Orientation {
     }
 }
 
-const SQRT3:f32 = 1.7320508;
+pub const SQRT3:f32 = 1.7320508;
 
 const layout_pointy: Orientation = Orientation::new(SQRT3,SQRT3/2.0,0.0,3.0/2.0,SQRT3/3.0,-1.0/3.0,0.0,2.0/3.0,0.5);
 
@@ -36,21 +36,22 @@ pub struct Point {
 pub struct Hex_Layout{
     orientation: Orientation,
     pub size: Point,
-    origin: Point
+    origin: Point,
+    is_flat: bool,
 }
 
 impl Hex_Layout {
     
     pub const fn new(ori:Orientation,size:Point,origin:Point) -> Hex_Layout{
-        Hex_Layout { orientation: ori, size: size, origin: origin }
+        Hex_Layout { orientation: ori, size: size, origin: origin, is_flat:false}
     }
 
     pub fn new_flat(size:Point,origin:Point) -> Hex_Layout{
-        Hex_Layout { orientation: layout_flat, size: size, origin: origin }
+        Hex_Layout { orientation: layout_flat, size: size, origin: origin,is_flat:true}
     }
 
     pub fn new_pointy(size:Point,origin:Point) -> Hex_Layout{
-        Hex_Layout { orientation: layout_pointy, size: size, origin: origin }
+        Hex_Layout { orientation: layout_pointy, size: size, origin: origin, is_flat:false}
     }
 
     pub fn hex_to_pixel(&self,h:&Hex) -> Point{

@@ -5,7 +5,7 @@ use glam::Vec3;
 use util::{input_handler, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
-use world::{draw_functions, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point}, tile::Tile, world_camera::WorldCamera};
+use world::{draw_functions, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, SQRT3}, tile::Tile, world_camera::WorldCamera};
 use std::{alloc::Layout, io::stdout, mem::{self, size_of}, time::{Duration, Instant}};
 use glium::PolygonMode::Line;
 mod rendering;
@@ -51,7 +51,7 @@ fn main() {
 
     let mut camera_matrix: glam::Mat4 = camera.look_at(camera.get_pos()+camera.get_front());
     //println!("camera matrix glm is {:#?}", RenderCamera::look_at_glm(Vec3::new(2.0,-1.0,1.0), Vec3::new(-2.0,1.0,1.0),Vec3::new(0.0,1.0,0.0)));
-    println!("camera matrix is: {:#?}", camera_matrix);
+    //println!("camera matrix is: {:#?}", camera_matrix);
     // 1. The **winit::EventLoop** for handling events.
     let (event_loop, window, display) = init_window();
     // Check if windows then: 
@@ -67,10 +67,14 @@ fn main() {
     let hex_scale: f32 = 0.005;
     let hex_size = 0.04;
 
+    let constant_factor = hex_size/0.04;
+
     let hex = Hex::new(0, 0, 0);
-    let layout = Hex_Layout::new_flat(Point{x:hex_size/hex_scale,y:(hex_size)/hex_scale},Point{x:0.0,y:0.0});
+    let layout = Hex_Layout::new_flat(Point{x:hex_size/hex_scale,y:hex_size/hex_scale},Point{x:0.0,y:0.0});
     let corners = layout.polygon_corners(&hex); 
     let world_camera = WorldCamera::new();
+
+    println!("New hex each {} x", layout.size.x as f32*(0.01+hex_scale));
 
     let hex_vert_2 = array_to_VBO(corners);
     let hex_indecies_fan: [u16; 8] = [ 
@@ -107,8 +111,8 @@ fn main() {
         .. Default::default()
     };
 
-    println!("Window size is: {:?}", window.inner_size().width);
-    println!("Frame buffer size is: {:?}", display.get_framebuffer_dimensions().0);
+    //println!("Window size is: {:?}", window.inner_size().width);
+    //println!("Frame buffer size is: {:?}", display.get_framebuffer_dimensions().0);
 
     let needed_hexes_x = ((800.0) / (2.0*(layout.size.x))) as i32;
     let needed_hexes_y = ((480.0) / (layout.size.y)) as i32;
@@ -117,14 +121,13 @@ fn main() {
     let mut r = needed_hexes_y;
     let mut max_r = needed_hexes_y-1;
     let mut amount_of_hexes = 0;
-    println!("Needed hexes are {:#?}, {:#?}", needed_hexes_x, needed_hexes_y);
+    //println!("Needed hexes are {:#?}, {:#?}", needed_hexes_x, needed_hexes_y);
 
     let mut color1: Vec<[f32;3]> = vec![];
     let mut color2: Vec<[f32;3]> = vec![];
-    let mut color_x2 = 0.0;
-    let mut color_y2 = 1.0;
     let data = (0..(needed_hexes_x*needed_hexes_y*2) as usize)
         .map(|_| {
+            //Gör så att denna börjar längre ned, är nödigt att ha massor över och för lite under...
             let s = -q-r;
             
             let coords = layout.hex_to_pixel(&Hex::new(q, r, s));
@@ -134,25 +137,22 @@ fn main() {
             if q == 0 && r == 0 {
                 color_x = 1.0;
                 color_y = 1.0;
-                println!("Size is: {:#?}", layout.size);
-                println!("Coords are: {:#?}", coords);
+                //println!("Size is: {:#?}", layout.size);
+                //println!("Coords are: {:#?}", coords);
             }else{
                 color_x = (q+20) as f32/40.0;
                 color_y = (r+20) as f32/40.0;
             }
 
-            if q % 2 == 0 && color_x2 == 1.0{
-                color_x2 = 0.0;
-            }else if q % 2 == 0 {
-                color_x2 = 1.0;
-            }
 
-            if r % 2 == 0 && color_y2 == 1.0{
-                color_y2 = 0.0;
-            }else if r % 2 == 0{
-                color_y2 = 1.0;
-            }
-
+            let color_choose = (((q-r) % 3) + 3) % 3;
+            let color = if color_choose == 0{
+                0.0
+            }else if color_choose == 1 {
+                0.5
+            }else{
+                1.0
+            };
 
             if q < needed_hexes_x+1{
                 q += 1;
@@ -170,14 +170,14 @@ fn main() {
             color2.push([color_y,color_x, 1.0]);
             Attr {
                 world_position: [coords.x, coords.y, -1.0],
-                colour: [0.0,0.0, 0.0],
+                colour: [0.0,color, 0.0],
             }
         })
         .collect::<Vec<_>>();
 
     
-    println!("{:#?}", data[0]);
-    println!("Amount of true hexes are: {:#?}", amount_of_hexes);
+    //println!("{:#?}", data[0]);
+    //println!("Amount of true hexes are: {:#?}", amount_of_hexes);
 
     // Maybe try to have a double buffer of some kind..
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
@@ -185,10 +185,10 @@ fn main() {
     let mut mouse_pos: Point = Point{x:30.0,y:17.0};
     let frac_hex = layout.pixel_to_hex(&mouse_pos);
     let clicked_hex = frac_hex.hex_round();
-    println!("Clicked hex is: {:#?}", clicked_hex);
-    println!("Hex 1, -1 is at pixel: {:#?}", layout.hex_to_pixel(&Hex::new(0,0,0)));
-    println!("Dimension is: {:#?}", window.inner_size());
-    println!("Scale factors are: {} and {}", width_scale, height_scale);
+    //println!("Clicked hex is: {:#?}", clicked_hex);
+    //println!("Hex 1, -1 is at pixel: {:#?}", layout.hex_to_pixel(&Hex::new(0,0,0)));
+    //println!("Dimension is: {:#?}", window.inner_size());
+    //println!("Scale factors are: {} and {}", width_scale, height_scale);
     //println!("{:#?}", per_instance);
 
     let mut what_color:bool = false;
@@ -251,25 +251,29 @@ fn main() {
                 //When passing X limit, change to -X Limit
                 //When passing Y limit change to -Y Limit
                 if event.physical_key == keyboard::KeyCode::KeyW{
-                        camera.r#move(CAMERA_SPEED*camera.get_front());
-                        camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                    camera.r#move(CAMERA_SPEED*camera.get_front());
+                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                 } if event.physical_key == keyboard::KeyCode::KeyS{
-                        camera.r#move(-CAMERA_SPEED*camera.get_front());
-                        camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                    camera.r#move(-CAMERA_SPEED*camera.get_front());
+                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                 } if event.physical_key == keyboard::KeyCode::KeyA{
-                        camera.r#move(-CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
-                        let x_pos = camera.get_pos()[0];
-                        if x_pos < -0.12{
-                            camera.set_x(0.0);
-                        }
-                        camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                    camera.r#move(-CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
+                    let x_pos = camera.get_pos()[0];
+                    //Kom på varför det är 0.12 här och inget annat nummer...
+                    //Verkar ju bara bero på hex_size och inte scale....
+                    if x_pos < constant_factor*-0.12{
+                        camera.set_x(0.0);
+                        println!("Did jump!");
+                    }
+                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                 }if event.physical_key == keyboard::KeyCode::KeyD{
-                        camera.r#move(CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
-                        let x_pos = camera.get_pos()[0];
-                        if x_pos > 0.12{
-                            camera.set_x(0.0);
-                        }
-                        camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                    camera.r#move(CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
+                    let x_pos = camera.get_pos()[0];
+                    if x_pos > constant_factor*0.12{
+                        camera.set_x(0.0);
+                        println!("Did jump!");
+                    }
+                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                 }
                 println!("Camera is: {}", camera.get_pos());
             },
@@ -314,7 +318,7 @@ fn main() {
                             write: true,
                             .. Default::default()
                         },
-                        polygon_mode: Line,
+                        //polygon_mode: Line,
                         .. Default::default()
                     },
                 ).unwrap();
