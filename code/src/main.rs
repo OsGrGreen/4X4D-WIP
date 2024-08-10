@@ -2,7 +2,7 @@
 extern crate glium;
 extern crate winit;
 use glam::Vec3;
-use util::{input_handler, read_model};
+use util::{input_handler::{self, InputHandler}, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
 use world::{draw_functions, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, SQRT3}, tile::Tile, world_camera::WorldCamera};
@@ -47,7 +47,11 @@ fn main() {
 
     //Camera constants
 
-    const CAMERA_SPEED:f32 = 0.005;
+    const CAMERA_SPEED:f32 = 0.0025;
+
+    // Input handler
+
+    let mut input_handler = InputHandler::new();
 
     let mut camera_matrix: glam::Mat4 = camera.look_at(camera.get_pos()+camera.get_front());
     //println!("camera matrix glm is {:#?}", RenderCamera::look_at_glm(Vec3::new(2.0,-1.0,1.0), Vec3::new(-2.0,1.0,1.0),Vec3::new(0.0,1.0,0.0)));
@@ -214,6 +218,38 @@ fn main() {
     
         //let mut change_x = 0.0;
         //let mut change_y = 0.0;
+
+        //Update movement:
+        let mut movement = input_handler.get_movement();
+        if movement.length() > 0.0{
+            movement = movement.normalize();
+            camera.r#move(movement[1]*CAMERA_SPEED*camera.get_up());
+            let y_pos = camera.get_pos()[1];
+            if y_pos < constant_factor*-0.21{
+                camera.set_y(0.0);
+                println!("Did jump!");
+            } else if y_pos > constant_factor*0.21{
+                camera.set_y(0.0);
+                println!("Did jump!");
+            }        
+            camera.r#move(movement[0]*CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
+            let x_pos = camera.get_pos()[0];
+                        //Kom på varför det är 0.12 här och inget annat nummer...
+                        //Verkar ju bara bero på hex_size och inte scale....
+            if x_pos < constant_factor*-0.12{
+                camera.set_x(0.0);
+                println!("Did jump!");
+            }else if x_pos > constant_factor*0.12{
+                camera.set_x(0.0);
+                println!("Did jump!");
+            }
+            println!("Camera is: {}", camera.get_pos());
+    
+            //Gör så kameran bara uppdateras när man faktiskt rör på sig...
+            camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+        }
+
+
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
@@ -234,48 +270,18 @@ fn main() {
                 println!("Clicked hex is: {:#?}", clicked_hex);
             }
 
-
             // TODO
             // Make input a little bit nicer
             winit::event::WindowEvent::KeyboardInput { device_id, event, is_synthetic: _ } =>{
-                    //If escape is pressed, then exit
-                println!("Pressed button is: {:#?}", event.physical_key);
-                if event.physical_key == keyboard::KeyCode::Escape{
-                        window_target.exit()
-                } 
-                
 
-                //Change camera_speed to delta time...
-                //Restart camera every 0.1 x (and y probably)
-                // Should be able to move X and Y seperatly. 
-                //When passing X limit, change to -X Limit
-                //When passing Y limit change to -Y Limit
-                if event.physical_key == keyboard::KeyCode::KeyW{
-                    camera.r#move(CAMERA_SPEED*camera.get_front());
-                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-                } if event.physical_key == keyboard::KeyCode::KeyS{
-                    camera.r#move(-CAMERA_SPEED*camera.get_front());
-                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-                } if event.physical_key == keyboard::KeyCode::KeyA{
-                    camera.r#move(-CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
-                    let x_pos = camera.get_pos()[0];
-                    //Kom på varför det är 0.12 här och inget annat nummer...
-                    //Verkar ju bara bero på hex_size och inte scale....
-                    if x_pos < constant_factor*-0.12{
-                        camera.set_x(0.0);
-                        println!("Did jump!");
-                    }
-                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-                }if event.physical_key == keyboard::KeyCode::KeyD{
-                    camera.r#move(CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
-                    let x_pos = camera.get_pos()[0];
-                    if x_pos > constant_factor*0.12{
-                        camera.set_x(0.0);
-                        println!("Did jump!");
-                    }
-                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-                }
-                println!("Camera is: {}", camera.get_pos());
+                //Handle other inputs
+                if event.physical_key == keyboard::KeyCode::Escape{
+                    window_target.exit()
+                } 
+                //Handle WASD
+
+                input_handler.update_input(event);
+
             },
             winit::event::WindowEvent::Resized(window_size) => {
                 perspective = rendering::render::calculate_perspective(window_size.into());
@@ -336,6 +342,13 @@ fn main() {
             },
             _ => (),
         };
+
+        // I think this solution is broken. 
+        // Can get stuck in infinite screen or something
+        // Works for now but needs to be fixed...
+
+
         frames += 1.0;
+
     });
 }
