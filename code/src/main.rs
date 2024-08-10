@@ -47,7 +47,7 @@ fn main() {
 
     //Camera constants
 
-    const CAMERA_SPEED:f32 = 0.0025;
+    const CAMERA_SPEED:f32 = 0.0005;
 
     // Input handler
 
@@ -202,8 +202,12 @@ fn main() {
 
     let mut timer = Instant::now();
     let _ = event_loop.run(move |event, window_target| {
-        /*let now = Instant::now();
-        let duration = now.duration_since(timer);
+        let now = Instant::now();
+        //Delta time calculation may be wrong...
+        let delta_time = now.duration_since(timer).as_millis() as f32;
+        //println!("Delta time is: {}", delta_time);
+        timer = now;
+        /*let duration = now.duration_since(timer);
         if duration.as_millis() >= 1{
             //println!("FPS: {}", (frames*1000.0) / duration.as_millis() as f32);
             frames = 0.0;
@@ -223,16 +227,17 @@ fn main() {
         let mut movement = input_handler.get_movement();
         if movement.length() > 0.0{
             movement = movement.normalize();
-            camera.r#move(movement[1]*CAMERA_SPEED*camera.get_up());
+            camera.r#move(delta_time*movement[1]*CAMERA_SPEED*camera.get_up());
             let y_pos = camera.get_pos()[1];
-            if y_pos < constant_factor*-0.21{
+            //Inte helt perfekt än måste fixa till lite....
+            if y_pos < constant_factor*-0.206{
                 camera.set_y(0.0);
                 println!("Did jump!");
-            } else if y_pos > constant_factor*0.21{
+            } else if y_pos > constant_factor*0.206{
                 camera.set_y(0.0);
                 println!("Did jump!");
             }        
-            camera.r#move(movement[0]*CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
+            camera.r#move(delta_time*movement[0]*CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
             let x_pos = camera.get_pos()[0];
                         //Kom på varför det är 0.12 här och inget annat nummer...
                         //Verkar ju bara bero på hex_size och inte scale....
@@ -243,7 +248,7 @@ fn main() {
                 camera.set_x(0.0);
                 println!("Did jump!");
             }
-            println!("Camera is: {}", camera.get_pos());
+            //println!("Camera is: {}", camera.get_pos());
     
             //Gör så kameran bara uppdateras när man faktiskt rör på sig...
             camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
