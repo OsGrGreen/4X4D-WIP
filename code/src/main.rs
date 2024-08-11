@@ -121,9 +121,9 @@ fn main() {
     let needed_hexes_x = ((800.0) / (2.0*(layout.size.x))) as i32;
     let needed_hexes_y = ((480.0) / (layout.size.y)) as i32;
 
-    let mut q = -needed_hexes_x;
-    let mut r = needed_hexes_y;
-    let mut max_r = needed_hexes_y-1;
+    let mut q = -needed_hexes_x+5;
+    let mut r = needed_hexes_y-8;
+    let mut max_r = needed_hexes_y-9;
     let mut amount_of_hexes = 0;
     //println!("Needed hexes are {:#?}, {:#?}", needed_hexes_x, needed_hexes_y);
 
@@ -158,14 +158,14 @@ fn main() {
                 1.0
             };
 
-            if q < needed_hexes_x+1{
+            if q < needed_hexes_x-5{
                 q += 1;
                 if q % 2 == 0 && r > -needed_hexes_y{
                     r -= 1;
                 }
                 amount_of_hexes += 1;
-            }else if max_r > -1{
-                q = -needed_hexes_x;
+            }else if max_r > -2{
+                q = -needed_hexes_x+5;
                 r = max_r;
                 max_r -= 1;
                 amount_of_hexes += 1;
@@ -174,14 +174,14 @@ fn main() {
             color2.push([color_y,color_x, 1.0]);
             Attr {
                 world_position: [coords.x, coords.y, -1.0],
-                colour: [0.0,color, 0.0],
+                colour: [color/2.0,color, 0.0],
             }
         })
         .collect::<Vec<_>>();
 
     
     //println!("{:#?}", data[0]);
-    //println!("Amount of true hexes are: {:#?}", amount_of_hexes);
+    println!("Amount of true hexes are: {:#?}", amount_of_hexes);
 
     // Maybe try to have a double buffer of some kind..
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
@@ -223,19 +223,18 @@ fn main() {
         //let mut change_x = 0.0;
         //let mut change_y = 0.0;
 
-        //Update movement:
+        //Update movement (Kanske göra efter allt annat... possibly):
         let mut movement = input_handler.get_movement();
         if movement.length() > 0.0{
             movement = movement.normalize();
+            //Flytta en i taget...
             camera.r#move(delta_time*movement[1]*CAMERA_SPEED*camera.get_up());
             let y_pos = camera.get_pos()[1];
             //Inte helt perfekt än måste fixa till lite....
             if y_pos < constant_factor*-0.206{
                 camera.set_y(0.0);
-                println!("Did jump!");
             } else if y_pos > constant_factor*0.206{
                 camera.set_y(0.0);
-                println!("Did jump!");
             }        
             camera.r#move(delta_time*movement[0]*CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
             let x_pos = camera.get_pos()[0];
@@ -243,10 +242,8 @@ fn main() {
                         //Verkar ju bara bero på hex_size och inte scale....
             if x_pos < constant_factor*-0.12{
                 camera.set_x(0.0);
-                println!("Did jump!");
             }else if x_pos > constant_factor*0.12{
                 camera.set_x(0.0);
-                println!("Did jump!");
             }
             //println!("Camera is: {}", camera.get_pos());
     
@@ -283,6 +280,14 @@ fn main() {
                 if event.physical_key == keyboard::KeyCode::Escape{
                     window_target.exit()
                 } 
+                else if event.physical_key == keyboard::KeyCode::KeyQ{
+                    camera.r#move(50.0*-CAMERA_SPEED*camera.get_front());
+                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                }
+                else if event.physical_key == keyboard::KeyCode::KeyE{
+                    camera.r#move(50.0*CAMERA_SPEED*camera.get_front());
+                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                }
                 //Handle WASD
 
                 input_handler.update_input(event);
