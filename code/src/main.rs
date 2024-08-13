@@ -129,7 +129,8 @@ fn main() {
 
     let mut color1: Vec<[f32;3]> = vec![];
     let mut color2: Vec<[f32;3]> = vec![];
-    let data = (0..(needed_hexes_x*needed_hexes_y*2) as usize)
+    //Does a 300 iterations to many
+    let data = (0..(needed_hexes_x*r*2) as usize)
         .map(|_| {
             //Gör så att denna börjar längre ned, är nödigt att ha massor över och för lite under...
             let s = -q-r;
@@ -178,6 +179,8 @@ fn main() {
             }
         })
         .collect::<Vec<_>>();
+
+    println!("data length is: {}", data.len());
 
     
     //println!("{:#?}", data[0]);
