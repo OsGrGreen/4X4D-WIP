@@ -39,3 +39,6 @@ I think this should minimize the amount of memory needed.
     - https://www.youtube.com/watch?v=3t4W-E0PKUE
     - https://www.researchgate.net/publication/233732668_Procedural_Map_Generation_for_a_RTS_Game
     - https://www.youtube.com/watch?v=j-rCuN7uMR8&list=PLbghT7MmckI7JHf0pdEQ8fbPb-LoDXEno
+- [ ] Make all random constants now actually be grounded in real numbers...
+    - Like the width of the screen or how many hexes should be generated and so on.
+- [ ] Disable V-sync?
