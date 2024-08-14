@@ -258,6 +258,7 @@ fn main() {
         //Update movement (Kanske göra efter allt annat... possibly):
         let mut movement = input_handler.get_movement();
         if movement.length() > 0.0{
+            let mut traveresed_whole_hex = false;
             movement = movement.normalize();
             //Flytta en i taget...
             camera.r#move(delta_time*movement[1]*CAMERA_SPEED*camera.get_up());
@@ -266,9 +267,11 @@ fn main() {
             if y_pos < constant_factor*-0.206{
                 camera.set_y(0.0);
                 world_camera.move_camera(0, 3);
+                traveresed_whole_hex = true;
             } else if y_pos > constant_factor*0.206{
                 camera.set_y(0.0);
                 world_camera.move_camera(0, -3);
+                traveresed_whole_hex = true;
             }        
             camera.r#move(delta_time*movement[0]*CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
             let x_pos = camera.get_pos()[0];
@@ -277,13 +280,17 @@ fn main() {
             if x_pos < constant_factor*-0.12{
                 camera.set_x(0.0);
                 world_camera.move_camera(-2, 0);
+                traveresed_whole_hex = true;
             }else if x_pos > constant_factor*0.12{
                 camera.set_x(0.0);
                 world_camera.move_camera(2, 0);
+                traveresed_whole_hex = true;
             }
             //println!("Camera is: {}", camera.get_pos());
-            draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
             //Gör så kameran bara uppdateras när man faktiskt rör på sig...
+            if traveresed_whole_hex{
+                draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+            }
             camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
         }
 
@@ -404,11 +411,8 @@ fn main() {
             _ => (),
         };
 
-        // I think this solution is broken. 
-        // Can get stuck in infinite screen or something
-        // Works for now but needs to be fixed...
 
-
+        println!("Time for one frame is: {} ms", now.elapsed().as_millis());
         frames += 1.0;
 
     });
