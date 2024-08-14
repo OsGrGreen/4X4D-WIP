@@ -1,6 +1,17 @@
+#[derive(Copy, Clone,Debug)]
 pub struct Tile{
     information: u8,
 }
+
+const biome_to_colour: [[f32;3];8] = [
+    [0.0,0.0,0.0], // Void, 0
+    [0.0,0.3,1.0], // Water, 1
+    [0.3,1.0,0.0], // Woods, 2
+    [1.0,1.0,0.2], // Plain, 3
+    [0.5,0.6,0.4], // Mountain, 4
+    [0.9,0.9,0.9], // Hills, 5
+    [0.5,0.0,1.0], // Unknown, 6
+    [0.5,0.0,0.5]]; // Debug, 7
 
 impl Tile{
     pub fn new(biome:u16, resource: u16) -> Tile{
@@ -10,6 +21,10 @@ impl Tile{
 
     pub fn get_biome(&self) -> u8{
         return self.information >> 5 & 7
+    }
+
+    pub fn get_biome_colour(&self) -> [f32;3]{
+        return biome_to_colour[(self.information >> 5 & 7) as usize]
     }
 
     pub fn get_improved(&self) -> u8{

@@ -1,11 +1,12 @@
 #[macro_use]
 extern crate glium;
 extern crate winit;
+use rand::{distr::{Distribution, Uniform}, Rng};
 use glam::Vec3;
 use util::{input_handler::{self, InputHandler}, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
-use world::{draw_functions, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, SQRT3}, tile::Tile, world_camera::WorldCamera};
+use world::{draw_functions::{self, cantor_2}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, SQRT3}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
 use std::{alloc::Layout, io::stdout, mem::{self, size_of}, time::{Duration, Instant}};
 use glium::PolygonMode::Line;
 mod rendering;
@@ -42,6 +43,25 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
 
 fn main() {
 
+    let mut world_vec: Vec<Vec<Tile>> = vec![vec![]];
+    let mut rng = rand::thread_rng();
+    let die = Uniform::new_inclusive(0, 5).unwrap();
+    for i in 0..NUM_COLMS{
+        for _ in 0..NUM_ROWS{
+            world_vec[i].push(Tile::new(die.sample(&mut rng), 0));
+        }
+        if i != NUM_COLMS-1{
+            world_vec.push(vec![]);
+        }
+    }
+    //world_vec[0][0].set_biome(7);
+    for val in 0..world_vec.len(){
+        world_vec[val][0].set_biome(7);
+    }
+
+    //println!("world vec is now {:#?}", world_vec);
+    println!("world vec length is {:#?} x {:#?}", world_vec.len(), world_vec[0].len());
+
     //let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,0.5), Vec3::new(0.0,0.0,0.0));
     let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,4.5), Vec3::new(0.0,0.0,0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0,0.0,-1.0));
 
@@ -76,7 +96,7 @@ fn main() {
     let hex = Hex::new(0, 0, 0);
     let layout = Hex_Layout::new_flat(Point{x:hex_size/hex_scale,y:hex_size/hex_scale},Point{x:0.0,y:0.0});
     let corners = layout.polygon_corners(&hex); 
-    let world_camera = WorldCamera::new();
+    let mut world_camera = WorldCamera::new();
 
     println!("New hex each {} x", layout.size.x as f32*(0.01+hex_scale));
 
@@ -121,6 +141,8 @@ fn main() {
     let needed_hexes_x = ((800.0) / (2.0*(layout.size.x))) as i32;
     let needed_hexes_y = ((480.0) / (layout.size.y)) as i32;
 
+    let screen_size = (needed_hexes_x as usize, needed_hexes_y as usize);
+
     let mut q = -needed_hexes_x+5;
     let mut r = needed_hexes_y-8;
     let mut max_r = needed_hexes_y-9;
@@ -131,9 +153,11 @@ fn main() {
     let mut color2: Vec<[f32;3]> = vec![];
     //Does a 300 iterations to many
     let data = (0..(needed_hexes_x*r*2) as usize)
-        .map(|_| {
+        .map(|debug_val| {
             //Gör så att denna börjar längre ned, är nödigt att ha massor över och för lite under...
             let s = -q-r;
+
+            println!("Cantor of hex {}, {}, {} is {}", q, r, s, draw_functions::cantor_3(q as f64, r as f64,s as f64));
             
             let coords = layout.hex_to_pixel(&Hex::new(q, r, s));
 
@@ -151,7 +175,7 @@ fn main() {
 
 
             let color_choose = (((q-r) % 3) + 3) % 3;
-            let color = if color_choose == 0{
+            let mut color = if color_choose == 0{
                 0.0
             }else if color_choose == 1 {
                 0.5
@@ -189,6 +213,11 @@ fn main() {
     // Maybe try to have a double buffer of some kind..
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
     let mut per_instance = glium::vertex::VertexBuffer::persistent(&display, &data).unwrap();
+
+    let timer = Instant::now();
+    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, (0,0), screen_size);
+    println!("Elapsed for updating {} x {} world took: {} ms", NUM_COLMS, NUM_ROWS, timer.elapsed().as_millis());
+
     let mut mouse_pos: Point = Point{x:30.0,y:17.0};
     let frac_hex = layout.pixel_to_hex(&mouse_pos);
     let clicked_hex = frac_hex.hex_round();
@@ -236,8 +265,10 @@ fn main() {
             //Inte helt perfekt än måste fixa till lite....
             if y_pos < constant_factor*-0.206{
                 camera.set_y(0.0);
+                world_camera.move_camera(0, 3);
             } else if y_pos > constant_factor*0.206{
                 camera.set_y(0.0);
+                world_camera.move_camera(0, -3);
             }        
             camera.r#move(delta_time*movement[0]*CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
             let x_pos = camera.get_pos()[0];
@@ -245,11 +276,13 @@ fn main() {
                         //Verkar ju bara bero på hex_size och inte scale....
             if x_pos < constant_factor*-0.12{
                 camera.set_x(0.0);
+                world_camera.move_camera(-2, 0);
             }else if x_pos > constant_factor*0.12{
                 camera.set_x(0.0);
+                world_camera.move_camera(2, 0);
             }
             //println!("Camera is: {}", camera.get_pos());
-    
+            draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
             //Gör så kameran bara uppdateras när man faktiskt rör på sig...
             camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
         }
@@ -280,16 +313,31 @@ fn main() {
             winit::event::WindowEvent::KeyboardInput { device_id, event, is_synthetic: _ } =>{
 
                 //Handle other inputs
-                if event.physical_key == keyboard::KeyCode::Escape{
+                if event.physical_key == keyboard::KeyCode::Escape && event.state.is_pressed(){
                     window_target.exit()
                 } 
-                else if event.physical_key == keyboard::KeyCode::KeyQ{
+                else if event.physical_key == keyboard::KeyCode::KeyQ && event.state.is_pressed(){
                     camera.r#move(50.0*-CAMERA_SPEED*camera.get_front());
                     camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyE{
                     camera.r#move(50.0*CAMERA_SPEED*camera.get_front());
                     camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
+                    world_camera.move_camera(0, 2);
+                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                }
+                else if event.physical_key == keyboard::KeyCode::KeyH && event.state.is_pressed(){
+                    world_camera.move_camera(2, 0);
+                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                }
+                else if event.physical_key == keyboard::KeyCode::KeyJ && event.state.is_pressed(){
+                    world_camera.move_camera(0, -2);
+                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                }
+                else if event.physical_key == keyboard::KeyCode::KeyK && event.state.is_pressed(){
+                    world_camera.move_camera(-2, 0);
+                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
                 }
                 //Handle WASD
 
