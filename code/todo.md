@@ -33,8 +33,9 @@ I think this should minimize the amount of memory needed.
 
 - [ ] Create line outlines for each hex, to make each hex pop out more.
 - [ ] Create "random" terrain generation see
-    - [https://gamedev.stackexchange.com/questions/16541/random-map-generation-strategies-for-scattering-clustering-random-nodes]
-    - [https://www.youtube.com/watch?v=-H01z7cdOW0]
-    - [https://www.youtube.com/watch?v=JzyOWGoB4t8]
-    - [https://www.youtube.com/watch?v=3t4W-E0PKUE]
-    - [https://www.researchgate.net/publication/233732668_Procedural_Map_Generation_for_a_RTS_Game]
+    - https://gamedev.stackexchange.com/questions/16541/random-map-generation-strategies-for-scattering-clustering-random-nodes
+    - https://www.youtube.com/watch?v=-H01z7cdOW0
+    - https://www.youtube.com/watch?v=JzyOWGoB4t8
+    - https://www.youtube.com/watch?v=3t4W-E0PKUE
+    - https://www.researchgate.net/publication/233732668_Procedural_Map_Generation_for_a_RTS_Game
+    - https://www.youtube.com/watch?v=j-rCuN7uMR8&list=PLbghT7MmckI7JHf0pdEQ8fbPb-LoDXEno
