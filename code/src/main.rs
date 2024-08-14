@@ -101,8 +101,13 @@ fn main() {
     println!("New hex each {} x", layout.size.x as f32*(0.01+hex_scale));
 
     let hex_vert_2 = array_to_VBO(corners);
-    let hex_indecies_fan: [u16; 8] = [ 
-        0, 1, 2, 3, 4 , 5, 6, 1];
+    
+    println!("hexvert is {:#?}", hex_vert_2);
+    println!("hexvert is {:#?}", hex_vert_2.len());
+
+    let hex_indecies_fan: [u16; 9] = [ 
+        6, 0, 1, 2, 3, 4 , 5, 0, 6
+        ];
 
     let cup_verts = util::read_model("./models/hex.obj");
     let vert_shad = util::read_shader("./shaders/vert1.4s");
@@ -157,7 +162,7 @@ fn main() {
             //Gör så att denna börjar längre ned, är nödigt att ha massor över och för lite under...
             let s = -q-r;
 
-            println!("Cantor of hex {}, {}, {} is {}", q, r, s, draw_functions::cantor_3(q as f64, r as f64,s as f64));
+            //println!("Cantor of hex {}, {}, {} is {}", q, r, s, draw_functions::cantor_3(q as f64, r as f64,s as f64));
             
             let coords = layout.hex_to_pixel(&Hex::new(q, r, s));
 
@@ -385,7 +390,9 @@ fn main() {
                             write: true,
                             .. Default::default()
                         },
-                        //polygon_mode: Line,
+                      //polygon_mode: glium::draw_parameters::PolygonMode::Line,
+                      line_width: Some(3.0),
+                      point_size: Some(4.0),
                         .. Default::default()
                     },
                 ).unwrap();
@@ -407,8 +414,7 @@ fn main() {
         // I think this solution is broken. 
         // Can get stuck in infinite screen or something
         // Works for now but needs to be fixed...
-
-
+        println!("One frame took {} ms", now.elapsed().as_millis());
         frames += 1.0;
 
     });
