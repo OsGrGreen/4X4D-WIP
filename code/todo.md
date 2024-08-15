@@ -11,7 +11,6 @@ This should be relatively simple since we can just add an offset to the `tile` c
 I think this should minimize the amount of memory needed.
 
 
-
 ## TODO 06/08
 
 ### Main goals:

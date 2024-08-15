@@ -6,7 +6,7 @@ use glam::Vec3;
 use util::{input_handler::{self, InputHandler}, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
-use world::{draw_functions::{self, cantor_2}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, SQRT3}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
+use world::{draw_functions::{self, cantor_2}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, EVEN, ODD, SQRT3}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
 use std::{alloc::Layout, io::stdout, mem::{self, size_of}, time::{Duration, Instant}};
 use glium::PolygonMode::Line;
 mod rendering;
@@ -42,7 +42,7 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
 }
 
 fn main() {
-
+    //First value is what column, second value is what row
     let mut world_vec: Vec<Vec<Tile>> = vec![vec![]];
     let mut rng = rand::thread_rng();
     let die = Uniform::new_inclusive(0, 5).unwrap();
@@ -56,7 +56,11 @@ fn main() {
     }
     //world_vec[0][0].set_biome(7);
     for val in 0..world_vec.len(){
-        world_vec[val][0].set_biome(7);
+        if val == world_vec.len()/2{
+            world_vec[val][0].set_biome(6);
+        }else{
+            world_vec[val][0].set_biome(7);
+        }
     }
 
     //println!("world vec is now {:#?}", world_vec);
@@ -146,68 +150,39 @@ fn main() {
     let needed_hexes_x = ((800.0) / (2.0*(layout.size.x))) as i32;
     let needed_hexes_y = ((480.0) / (layout.size.y)) as i32;
 
-    let screen_size = (needed_hexes_x as usize, needed_hexes_y as usize);
-
-    let mut q = -needed_hexes_x+5;
-    let mut r = needed_hexes_y-8;
-    let mut max_r = needed_hexes_y-9;
     let mut amount_of_hexes = 0;
-    //println!("Needed hexes are {:#?}, {:#?}", needed_hexes_x, needed_hexes_y);
 
-    let mut color1: Vec<[f32;3]> = vec![];
-    let mut color2: Vec<[f32;3]> = vec![];
-    //Does a 300 iterations to many
-    let data = (0..(needed_hexes_x*r*2) as usize)
-        .map(|debug_val| {
-            //Gör så att denna börjar längre ned, är nödigt att ha massor över och för lite under...
-            let s = -q-r;
-
-            //println!("Cantor of hex {}, {}, {} is {}", q, r, s, draw_functions::cantor_3(q as f64, r as f64,s as f64));
-            
-            let coords = layout.hex_to_pixel(&Hex::new(q, r, s));
-
-            let mut color_x = 0.0;
-            let mut color_y = 0.0;
-            if q == 0 && r == 0 {
-                color_x = 1.0;
-                color_y = 1.0;
-                //println!("Size is: {:#?}", layout.size);
-                //println!("Coords are: {:#?}", coords);
-            }else{
-                color_x = (q+20) as f32/40.0;
-                color_y = (r+20) as f32/40.0;
-            }
-
+    // Not the most efficient or pretty way but it works..
+    let mut data: Vec<Attr> = vec![];
+    let left = -needed_hexes_y/2;
+    let top = -(needed_hexes_x);
+    let right = left.abs();
+    let bottom = top.abs();
+    let screen_size = (bottom*2,right*2);
+    //Börjar med att köra en column i taget.
+    for q in top..=bottom{
+        let q_offset = q>>1;
+        for r in left-q_offset..=right-q_offset{
+            let coords = layout.hex_to_pixel(&Hex::new(q, r, -q-r));
 
             let color_choose = (((q-r) % 3) + 3) % 3;
-            let mut color = if color_choose == 0{
+            let color = if color_choose == 0{
                 0.0
             }else if color_choose == 1 {
                 0.5
             }else{
                 1.0
             };
-
-            if q < needed_hexes_x-5{
-                q += 1;
-                if q % 2 == 0 && r > -needed_hexes_y{
-                    r -= 1;
-                }
-                amount_of_hexes += 1;
-            }else if max_r > -2{
-                q = -needed_hexes_x+5;
-                r = max_r;
-                max_r -= 1;
-                amount_of_hexes += 1;
-            }
-            color1.push([color_x,color_y, 1.0]);
-            color2.push([color_y,color_x, 1.0]);
-            Attr {
+            //println!("Posistion of this hex is {:#?}", coords);
+            let val = Attr {
                 world_position: [coords.x, coords.y, -1.0],
                 colour: [color/2.0,color, 0.0],
-            }
-        })
-        .collect::<Vec<_>>();
+            };
+            amount_of_hexes += 1;
+            data.push(val);
+        }
+    }
+
 
     println!("data length is: {}", data.len());
 
@@ -271,11 +246,11 @@ fn main() {
             //Inte helt perfekt än måste fixa till lite....
             if y_pos < constant_factor*-0.206{
                 camera.set_y(0.0);
-                world_camera.move_camera(0, 3);
+                world_camera.move_camera(0, -3);
                 traveresed_whole_hex = true;
             } else if y_pos > constant_factor*0.206{
                 camera.set_y(0.0);
-                world_camera.move_camera(0, -3);
+                world_camera.move_camera(0, 3);
                 traveresed_whole_hex = true;
             }        
             camera.r#move(delta_time*movement[0]*CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
@@ -318,6 +293,8 @@ fn main() {
                 let frac_hex = layout.pixel_to_hex(&mouse_pos);
                 let clicked_hex = frac_hex.hex_round();
                 println!("Clicked hex is: {:#?}", clicked_hex);
+                println!("offset coord of hex EVEN is: {:#?}", qoffset_from_cube(EVEN,&clicked_hex));
+                println!("offset coord of hex ODD is: {:#?}", qoffset_from_cube(ODD,&clicked_hex));
             }
 
             // TODO
@@ -421,7 +398,7 @@ fn main() {
         // I think this solution is broken. 
         // Can get stuck in infinite screen or something
         // Works for now but needs to be fixed...
-        println!("One frame took {} ms", now.elapsed().as_millis());
+        //println!("One frame took {} ms", now.elapsed().as_millis());
         frames += 1.0;
 
     });

@@ -29,7 +29,7 @@ pub fn reverse_cantor_3(k:f64) -> (f64, f64, f64){
 
 
 //Make this slightly more efficient...
-pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tiles: &Vec<Vec<Tile>>, start_tile: (isize,isize), size_screen: (usize,usize)) {
+pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tiles: &Vec<Vec<Tile>>, start_tile: (isize,isize), size_screen: (i32,i32)) {
     
     //let timer = Instant::now();
 
@@ -47,22 +47,22 @@ pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tile
     for (i, hex) in vertex_copy.iter().enumerate() {
         let current_tile = tiles[column_pos][row_pos];
         //println!("Taking tile from coordinate {}, {}", column_pos, row_pos);
-        row_pos += 1;
-        if row_pos >= NUM_ROWS{
-            row_pos = 0;
+        column_pos += 1;
+        if column_pos >= NUM_COLMS{
+            column_pos = 0;
         }
 
         // Width is 90 hexes
-        if traveresd_hexes >= 90{
-            row_pos = start_row;
-            column_pos += 1;
-            if column_pos >= NUM_COLMS{
-                column_pos = 0;
+        if traveresd_hexes >= size_screen.1{
+            column_pos = start_column;
+            row_pos += 1;
+            if row_pos >= NUM_ROWS{
+                row_pos = 0;
             }
-            traveresd_hexes = 0;
-        }else{
-            traveresd_hexes += 1;
+            traveresd_hexes = -1;
         }
+        traveresd_hexes += 1;
+        
         
         mapping.set(i,Attr {
             world_position: hex.world_position,
