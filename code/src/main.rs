@@ -2,11 +2,11 @@
 extern crate glium;
 extern crate winit;
 use rand::{distr::{Distribution, Uniform}, Rng};
-use glam::Vec3;
+use glam::{Mat4, Vec3, Vec4};
 use util::{input_handler::{self, InputHandler}, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
-use world::{draw_functions::{self, cantor_2}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, EVEN, ODD, SQRT3}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
+use world::{draw_functions::{self, cantor_2}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, EVEN, ODD, SQRT3}, offset_coords::{self, qoffset_from_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
 use std::{alloc::Layout, io::stdout, mem::{self, size_of}, time::{Duration, Instant}};
 use glium::PolygonMode::Line;
 mod rendering;
@@ -42,7 +42,8 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
 }
 
 fn main() {
-    //First value is what column, second value is what row
+    //First value is what row, second value is what column
+    // 0,0 is bottom left corner
     let mut world_vec: Vec<Vec<Tile>> = vec![vec![]];
     let mut rng = rand::thread_rng();
     let die = Uniform::new_inclusive(0, 5).unwrap();
@@ -54,19 +55,27 @@ fn main() {
             world_vec.push(vec![]);
         }
     }
-    //world_vec[0][0].set_biome(7);
-    for val in 0..world_vec.len(){
-        if val == world_vec.len()/2{
-            world_vec[val][0].set_biome(6);
-        }else{
-            world_vec[val][0].set_biome(7);
-        }
-    }
+
+    world_vec[0][0].set_biome(7);
+    world_vec[0][1].set_biome(7);
+    world_vec[0][2].set_biome(7);
 
     //println!("world vec is now {:#?}", world_vec);
     println!("world vec length is {:#?} x {:#?}", world_vec.len(), world_vec[0].len());
 
     //let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,0.5), Vec3::new(0.0,0.0,0.0));
+
+
+    // Closest camera can be: z = 2.15
+    // Furtherst camera can be: z = 4.85
+
+    /*
+    
+    y = 4.5 =; NDC = 0.095 width 0.05 height; PXS = 38 width 34 height
+    y = 2.15 =;  NDC = 0.52 width 0.8 height; PXS = 664 width 576 height
+    y = 4.84 =; NDC = 0.0275 width 0.04 height; PXS = 34 width 28 height
+
+     */
     let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,4.5), Vec3::new(0.0,0.0,0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0,0.0,-1.0));
 
     //Camera constants
@@ -94,13 +103,21 @@ fn main() {
 
     let hex_scale: f32 = 0.005;
     let hex_size = 0.04;
+    let hex_size_mat = [
+        [1.0*hex_scale, 0.0, 0.0, 0.0],
+        [0.0, 1.0*hex_scale, 0.0, 0.0],
+        [0.0, 0.0, 1.0*hex_scale, 0.0],
+        [0.0, 0.0, 2.0, 1.0f32]
+    ];
 
-    let constant_factor = hex_size/0.04;
+    let constant_factor = (hex_size/0.04)/100.0;
+
+    println!("constant_factor is {}", constant_factor);
 
     let hex = Hex::new(0, 0, 0);
     let layout = Hex_Layout::new_flat(Point{x:hex_size/hex_scale,y:hex_size/hex_scale},Point{x:0.0,y:0.0});
     let corners = layout.polygon_corners(&hex); 
-    let mut world_camera = WorldCamera::new();
+    let mut world_camera = WorldCamera::new((NUM_ROWS, NUM_COLMS));
 
     println!("New hex each {} x", layout.size.x as f32*(0.01+hex_scale));
 
@@ -125,6 +142,8 @@ fn main() {
     let light = [-1.0, 0.4, 0.9f32];
 
     let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
+    let mut inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
+
     let mut frames:f32 = 0.0;
 
     let params = glium::DrawParameters {
@@ -159,6 +178,7 @@ fn main() {
     let right = left.abs();
     let bottom = top.abs();
     let screen_size = (bottom*2,right*2);
+    println!("Screen size {:#?}", screen_size);
     //Börjar med att köra en column i taget.
     for q in top..=bottom{
         let q_offset = q>>1;
@@ -173,17 +193,17 @@ fn main() {
             }else{
                 1.0
             };
-            //println!("Posistion of this hex is {:#?}", coords);
+            //println!("Posistion of this hex {}, {} is {:#?}", q, r,coords);
             let val = Attr {
-                world_position: [coords.x, coords.y, -1.0],
+                world_position: [coords.x, coords.y, 0.0],
                 colour: [color/2.0,color, 0.0],
             };
             amount_of_hexes += 1;
             data.push(val);
         }
     }
-
-
+    println!("Layout size is: {:#?}", layout.size);
+    println!("Expected layout size is {}w, {}h",layout.get_width(),layout.get_height());
     println!("data length is: {}", data.len());
 
     
@@ -198,11 +218,26 @@ fn main() {
     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, (0,0), screen_size);
     println!("Elapsed for updating {} x {} world took: {} ms", NUM_COLMS, NUM_ROWS, timer.elapsed().as_millis());
 
-    let mut mouse_pos: Point = Point{x:30.0,y:17.0};
+    let mut mouse_pos: Point = Point{x:0.0,y:0.0};
     let frac_hex = layout.pixel_to_hex(&mouse_pos);
     let clicked_hex = frac_hex.hex_round();
-    //println!("Clicked hex is: {:#?}", clicked_hex);
-    //println!("Hex 1, -1 is at pixel: {:#?}", layout.hex_to_pixel(&Hex::new(0,0,0)));
+    println!("Clicked hex is: {:#?}", clicked_hex);
+    println!("Hex 0, 0 is at pixel: {:#?}", layout.hex_to_pixel(&Hex::new(0,0,0)));
+
+    let parity = 1;
+    let (mut clicked_x, mut clicked_y) = qoffset_from_cube(parity,&clicked_hex);
+    println!("clicked_hex is: {}", parity);
+
+    println!("In offset coords the clicked are should be in: {:#?}", offset_coords::qoffset_to_cube(EVEN, clicked_y, clicked_x));
+    println!("OR : {:#?}", offset_coords::qoffset_to_cube(ODD, clicked_y, clicked_x));
+    // Row 30
+    // COLUMN 26
+    clicked_x += 30;
+    clicked_y += 50;
+
+    println!("offset coord of hex is: {}, {}", clicked_x, clicked_y);
+    //world_vec[clicked_x as usize][clicked_y as usize].set_biome(6);
+    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
     //println!("Dimension is: {:#?}", window.inner_size());
     //println!("Scale factors are: {} and {}", width_scale, height_scale);
     //println!("{:#?}", per_instance);
@@ -244,11 +279,11 @@ fn main() {
             camera.r#move(delta_time*movement[1]*CAMERA_SPEED*camera.get_up());
             let y_pos = camera.get_pos()[1];
             //Inte helt perfekt än måste fixa till lite....
-            if y_pos < constant_factor*-0.206{
+            if y_pos < -constant_factor*(3.0/2.0*layout.get_height()){
                 camera.set_y(0.0);
                 world_camera.move_camera(0, -3);
                 traveresed_whole_hex = true;
-            } else if y_pos > constant_factor*0.206{
+            } else if y_pos > constant_factor*(3.0/2.0*layout.get_height()){
                 camera.set_y(0.0);
                 world_camera.move_camera(0, 3);
                 traveresed_whole_hex = true;
@@ -257,11 +292,11 @@ fn main() {
             let x_pos = camera.get_pos()[0];
                         //Kom på varför det är 0.12 här och inget annat nummer...
                         //Verkar ju bara bero på hex_size och inte scale....
-            if x_pos < constant_factor*-0.12{
+            if x_pos < -constant_factor*layout.get_width(){
                 camera.set_x(0.0);
                 world_camera.move_camera(-2, 0);
                 traveresed_whole_hex = true;
-            }else if x_pos > constant_factor*0.12{
+            }else if x_pos > constant_factor*layout.get_width(){
                 camera.set_x(0.0);
                 world_camera.move_camera(2, 0);
                 traveresed_whole_hex = true;
@@ -271,7 +306,9 @@ fn main() {
             if traveresed_whole_hex{
                 draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
             }
+            //println!("Camera offsets are: {:?}", world_camera.offsets());
             camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+            inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
         }
 
 
@@ -279,12 +316,20 @@ fn main() {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
             winit::event::WindowEvent::CursorMoved { device_id, position } => {
-                let new_pos_x = ((position.x as f32) - window.inner_size().width as f32/2.0 - world_camera.offsets().0 as f32)/width_scale as f32;
-                let new_pos_y =  ((-position.y as f32) + window.inner_size().height as f32/2.0 + world_camera.offsets().0 as f32)/height_scale as f32;
-                //change_x = mouse_pos.x-new_pos_x;
-                //change_y = mouse_pos.y-new_pos_y;
-                mouse_pos.x = new_pos_x;
-                mouse_pos.y = new_pos_y;
+                let mouse_y_flipped =  window.inner_size().height as f32 - position.y as f32;
+                let mouse_ndc = Vec4::new(
+                    position.x as f32 - window.inner_size().width as f32 / 2.0,
+                    (-mouse_y_flipped) + window.inner_size().height as f32 / 2.0,
+                    0.0,
+                    1.0,
+                );
+
+                println!("mouse_ndc: {}", mouse_ndc);
+
+                //println!("inversed: {}", inverse_mat*mouse_ndc);
+                let mouse_world = inverse_mat*mouse_ndc;
+                mouse_pos.x = mouse_world.x as f32;
+                mouse_pos.y = mouse_world.y as f32;
                 //println!("Mouse posistion became {:#?}", mouse_pos);
             }
             winit::event::WindowEvent::MouseInput { device_id, state, button } =>{
@@ -292,9 +337,28 @@ fn main() {
                 //println!("Dimension is: {:#?}", window.inner_size());
                 let frac_hex = layout.pixel_to_hex(&mouse_pos);
                 let clicked_hex = frac_hex.hex_round();
-                println!("Clicked hex is: {:#?}", clicked_hex);
-                println!("offset coord of hex EVEN is: {:#?}", qoffset_from_cube(EVEN,&clicked_hex));
-                println!("offset coord of hex ODD is: {:#?}", qoffset_from_cube(ODD,&clicked_hex));
+                let parity:i32 = 1 - 2 * (clicked_hex.get_r() & 1);
+                println!("Clicked hex is: {:#?}, is it EVEN or ODD: {}", clicked_hex, parity);
+                
+                let (mut clicked_x, mut clicked_y) = qoffset_from_cube(parity,&clicked_hex);
+                println!("clicked_hex is: {}", parity);
+                clicked_x += 50;
+                clicked_y += 30;
+                println!("offset coord of hex is: {}, {}", clicked_x, clicked_y);
+
+                //But these are the coordinates on the screen..
+                //Now they have to be translated into world coordinates
+                //Which I dont really know how to do right now...
+
+
+                //camera_offsets should update where the bottom left corner is in relation 
+
+                let camera_offsets = world_camera.offsets();
+                println!("Camera offsets are: {:?}", camera_offsets);
+                clicked_x += camera_offsets.0;
+                clicked_y += camera_offsets.1;
+                world_vec[(clicked_y) as usize][(clicked_x) as usize].set_biome(6);
+                draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
             }
 
             // TODO
@@ -308,10 +372,14 @@ fn main() {
                 else if event.physical_key == keyboard::KeyCode::KeyQ && event.state.is_pressed(){
                     camera.r#move(50.0*-CAMERA_SPEED*camera.get_front());
                     camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                    println!("Camera pos is: {:#?}", camera.get_pos());
+                    inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyE{
                     camera.r#move(50.0*CAMERA_SPEED*camera.get_front());
                     camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                    println!("Camera pos is: {:#?}", camera.get_pos());
+                    inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
                     world_camera.move_camera(0, 2);
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
@@ -335,6 +403,7 @@ fn main() {
             },
             winit::event::WindowEvent::Resized(window_size) => {
                 perspective = rendering::render::calculate_perspective(window_size.into());
+                inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
                 display.resize(window_size.into());
                 width_scale = window_size.width as f64/ std_width;
                 height_scale = window_size.height as f64/ std_height;
@@ -354,12 +423,6 @@ fn main() {
                     [0.0, 0.0, 0.01, 0.0],
                     [0.0, 0.0, 2.0, 1.0f32]
                 ];
-                let hex_size = [
-                    [1.0*hex_scale, 0.0, 0.0, 0.0],
-                    [0.0, 1.0*hex_scale, 0.0, 0.0],
-                    [0.0, 0.0, 1.0*hex_scale, 0.0],
-                    [0.0, 0.0, 2.0, 1.0f32]
-                ];
 
                 target.clear_color_and_depth((0.1, 0.4, 0.2, 1.0), 1.0);
 
@@ -367,7 +430,7 @@ fn main() {
                     (&hex_renderer.vbo, per_instance.per_instance().unwrap()),
                     &hex_renderer.indicies,
                     &hex_renderer.program,
-                    &uniform! { model: hex_size, projection: perspective, view:camera_matrix.to_cols_array_2d()},
+                    &uniform! { model: hex_size_mat, projection: perspective, view:camera_matrix.to_cols_array_2d()},
                     &glium::DrawParameters {
                         depth: glium::Depth {
                             test: glium::DepthTest::IfLess,

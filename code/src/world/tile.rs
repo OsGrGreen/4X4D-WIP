@@ -10,7 +10,7 @@ const biome_to_colour: [[f32;3];8] = [
     [1.0,1.0,0.2], // Plain, 3
     [0.5,0.6,0.4], // Mountain, 4
     [0.9,0.9,0.9], // Hills, 5
-    [0.5,0.0,1.0], // Unknown, 6
+    [0.75,0.0,0.0], // Unknown, 6
     [0.5,0.0,0.5]]; // Debug, 7
 
 impl Tile{

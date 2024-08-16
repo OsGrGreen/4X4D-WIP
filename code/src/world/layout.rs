@@ -59,16 +59,18 @@ impl Hex_Layout {
         Hex_Layout { orientation: layout_pointy, size: size, origin: origin, is_flat:false}
     }
 
+    pub fn get_height(&self) -> f32{
+        SQRT3*self.size.x
+    }
+
+    pub fn get_width(&self) -> f32{
+        3.0/2.0 * self.size.y
+    }
+
     pub fn hex_to_pixel(&self,h:&Hex) -> Point{
         let x:f32 = (self.orientation.f0*h.get_q() as f32+self.orientation.f1*h.get_r() as f32) * self.size.x;
         let y:f32 = (self.orientation.f2*h.get_q() as f32+self.orientation.f3*h.get_r() as f32) * self.size.y;
         Point { x: x+self.origin.x, y: y+self.origin.y }
-    }
-
-    pub fn hex_to_cartesian(&self, hex:&Hex) -> (i32, i32){
-        let x = hex.get_q() + 23;
-        let y =  hex.get_r()+24;
-        return (x,y);
     }
 
     pub fn pixel_to_hex(&self,p:&Point) -> FractionalHex{

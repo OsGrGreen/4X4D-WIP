@@ -6,6 +6,7 @@ use winit::window::Window; */
 
 use std::{collections::HashMap, option};
 
+use glam::Mat4;
 use glium::{glutin::surface::WindowSurface, index::Index, uniforms::{AsUniformValue, Uniforms, UniformsStorage}, Display, DrawParameters, Frame, Program, Surface};
 
 use crate::world::layout::Point;
