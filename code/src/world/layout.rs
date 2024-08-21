@@ -59,11 +59,11 @@ impl Hex_Layout {
         Hex_Layout { orientation: layout_pointy, size: size, origin: origin, is_flat:false}
     }
 
-    pub fn get_height(&self) -> f32{
+    pub fn get_width(&self) -> f32{
         SQRT3*self.size.x
     }
 
-    pub fn get_width(&self) -> f32{
+    pub fn get_height(&self) -> f32{
         3.0/2.0 * self.size.y
     }
 

@@ -2,8 +2,8 @@
 extern crate glium;
 extern crate winit;
 use rand::{distr::{Distribution, Uniform}, Rng};
-use glam::{Mat4, Vec3, Vec4};
-use util::{input_handler::{self, InputHandler}, read_model};
+use glam::{Mat4, Vec2, Vec3, Vec4, Vec4Swizzles};
+use util::{input_handler::{self, InputHandler}, ray_library::ray_plane_intersect, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
 use world::{draw_functions::{self, cantor_2}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, EVEN, ODD, SQRT3}, offset_coords::{self, qoffset_from_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
@@ -56,9 +56,6 @@ fn main() {
         }
     }
 
-    world_vec[0][0].set_biome(7);
-    world_vec[0][1].set_biome(7);
-    world_vec[0][2].set_biome(7);
 
     //println!("world vec is now {:#?}", world_vec);
     println!("world vec length is {:#?} x {:#?}", world_vec.len(), world_vec[0].len());
@@ -80,7 +77,7 @@ fn main() {
 
     //Camera constants
 
-    const CAMERA_SPEED:f32 = 0.0005;
+    const CAMERA_SPEED:f32 = 0.004;
 
     // Input handler
 
@@ -96,23 +93,28 @@ fn main() {
     let monitor_handle = window.primary_monitor();
     let std_width = 800.0;
     let std_height = 480.0;
-    window.set_fullscreen(Some(Fullscreen::Borderless(monitor_handle)));
+    //window.set_fullscreen(Some(Fullscreen::Borderless(monitor_handle)));
     let mut width_scale:f64 = window.inner_size().width as f64 / std_width;
     let mut height_scale:f64 = window.inner_size().height as f64 / std_height;
+    println!("Inner size is: {:#?}", window.inner_size());
+    println!("widht_scale is: {}", width_scale);
+    println!("hejgut scale is: {}", height_scale);
 
 
-    let hex_scale: f32 = 0.005;
-    let hex_size = 0.04;
+
+    let hex_scale: f32 = 1.0;
+    let hex_size = 0.16;
     let hex_size_mat = [
-        [1.0*hex_scale, 0.0, 0.0, 0.0],
-        [0.0, 1.0*hex_scale, 0.0, 0.0],
-        [0.0, 0.0, 1.0*hex_scale, 0.0],
-        [0.0, 0.0, 2.0, 1.0f32]
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0f32]
     ];
 
-    let constant_factor = (hex_size/0.04)/100.0;
+    let constant_factor = 100.0;
 
     println!("constant_factor is {}", constant_factor);
+    
 
     let hex = Hex::new(0, 0, 0);
     let layout = Hex_Layout::new_flat(Point{x:hex_size/hex_scale,y:hex_size/hex_scale},Point{x:0.0,y:0.0});
@@ -120,11 +122,15 @@ fn main() {
     let mut world_camera = WorldCamera::new((NUM_ROWS, NUM_COLMS));
 
     println!("New hex each {} x", layout.size.x as f32*(0.01+hex_scale));
+    let FOV = std::f32::consts::PI / 3.0;
+    let screen_hex_width = (layout.get_width()*1920.0)/(2.0*camera.get_pos().z*(FOV/2.0).tan());
+    println!("screen hex width is: {}", screen_hex_width);
+
 
     let hex_vert_2 = array_to_VBO(corners);
     
-    println!("hexvert is {:#?}", hex_vert_2);
-    println!("hexvert is {:#?}", hex_vert_2.len());
+    //println!("hexvert is {:#?}", hex_vert_2);
+    //println!("hexvert is {:#?}", hex_vert_2.len());
 
     let hex_indecies_fan: [u16; 9] = [ 
         6, 0, 1, 2, 3, 4 , 5, 0, 6
@@ -135,16 +141,17 @@ fn main() {
     let vert_shad_2 = util::read_shader("./shaders/vert2.4s");
     let frag_shad_1 = util::read_shader("./shaders/frag1.4s");
     let frag_shad_2 = util::read_shader("./shaders/frag2.4s");
-
+    //println!("{:#?}", &hex_vert_2);
     let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display).unwrap();
     let trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display).unwrap();
     
     let light = [-1.0, 0.4, 0.9f32];
 
     let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
-    let mut inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
-
     let mut frames:f32 = 0.0;
+
+    let mut transformation_mat = (Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat));
+    let mut inverse_transformation_mat = Mat4::inverse(&transformation_mat);
 
     let params = glium::DrawParameters {
         //To enable backfaceculling uncomment this
@@ -166,17 +173,17 @@ fn main() {
     //println!("Window size is: {:?}", window.inner_size().width);
     //println!("Frame buffer size is: {:?}", display.get_framebuffer_dimensions().0);
 
-    let needed_hexes_x = ((800.0) / (2.0*(layout.size.x))) as i32;
-    let needed_hexes_y = ((480.0) / (layout.size.y)) as i32;
+    let needed_hexes_x = ((800.0) / (2.0*(100.0*layout.get_width()))*1.5) as i32;
+    let needed_hexes_y = ((480.0) / (100.0*layout.get_height())) as i32;
 
     let mut amount_of_hexes = 0;
 
     // Not the most efficient or pretty way but it works..
     let mut data: Vec<Attr> = vec![];
-    let left = -needed_hexes_y/2;
-    let top = -(needed_hexes_x);
-    let right = left.abs();
-    let bottom = top.abs();
+    let left:i32 = -needed_hexes_y/2;
+    let top:i32 = -((needed_hexes_x));
+    let right:i32 = left.abs();
+    let bottom:i32 = top.abs();
     let screen_size = (bottom*2,right*2);
     println!("Screen size {:#?}", screen_size);
     //Börjar med att köra en column i taget.
@@ -202,9 +209,13 @@ fn main() {
             data.push(val);
         }
     }
+
+
+
     println!("Layout size is: {:#?}", layout.size);
     println!("Expected layout size is {}w, {}h",layout.get_width(),layout.get_height());
     println!("data length is: {}", data.len());
+    //println!("data is: {:#?}", data);
 
     
     //println!("{:#?}", data[0]);
@@ -214,41 +225,19 @@ fn main() {
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
     let mut per_instance = glium::vertex::VertexBuffer::persistent(&display, &data).unwrap();
 
-    let timer = Instant::now();
-    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, (0,0), screen_size);
-    println!("Elapsed for updating {} x {} world took: {} ms", NUM_COLMS, NUM_ROWS, timer.elapsed().as_millis());
+    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+
 
     let mut mouse_pos: Point = Point{x:0.0,y:0.0};
-    let frac_hex = layout.pixel_to_hex(&mouse_pos);
-    let clicked_hex = frac_hex.hex_round();
-    println!("Clicked hex is: {:#?}", clicked_hex);
-    println!("Hex 0, 0 is at pixel: {:#?}", layout.hex_to_pixel(&Hex::new(0,0,0)));
-
-    let parity = 1;
-    let (mut clicked_x, mut clicked_y) = qoffset_from_cube(parity,&clicked_hex);
-    println!("clicked_hex is: {}", parity);
-
-    println!("In offset coords the clicked are should be in: {:#?}", offset_coords::qoffset_to_cube(EVEN, clicked_y, clicked_x));
-    println!("OR : {:#?}", offset_coords::qoffset_to_cube(ODD, clicked_y, clicked_x));
-    // Row 30
-    // COLUMN 26
-    clicked_x += 30;
-    clicked_y += 50;
-
-    println!("offset coord of hex is: {}, {}", clicked_x, clicked_y);
-    //world_vec[clicked_x as usize][clicked_y as usize].set_biome(6);
-    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
-    //println!("Dimension is: {:#?}", window.inner_size());
-    //println!("Scale factors are: {} and {}", width_scale, height_scale);
-    //println!("{:#?}", per_instance);
-
-    let mut what_color:bool = false;
+    
 
     
     let radius = 5.0;
 
     let mut timer = Instant::now();
     let _ = event_loop.run(move |event, window_target| {
+        
+        
         let now = Instant::now();
         //Delta time calculation may be wrong...
         let delta_time = now.duration_since(timer).as_millis() as f32;
@@ -279,11 +268,11 @@ fn main() {
             camera.r#move(delta_time*movement[1]*CAMERA_SPEED*camera.get_up());
             let y_pos = camera.get_pos()[1];
             //Inte helt perfekt än måste fixa till lite....
-            if y_pos < -constant_factor*(3.0/2.0*layout.get_height()){
+            if y_pos < -constant_factor*(3.0/2.0*(layout.get_height())){
                 camera.set_y(0.0);
                 world_camera.move_camera(0, -3);
                 traveresed_whole_hex = true;
-            } else if y_pos > constant_factor*(3.0/2.0*layout.get_height()){
+            } else if y_pos > constant_factor*(3.0/2.0*(layout.get_height())){
                 camera.set_y(0.0);
                 world_camera.move_camera(0, 3);
                 traveresed_whole_hex = true;
@@ -292,11 +281,11 @@ fn main() {
             let x_pos = camera.get_pos()[0];
                         //Kom på varför det är 0.12 här och inget annat nummer...
                         //Verkar ju bara bero på hex_size och inte scale....
-            if x_pos < -constant_factor*layout.get_width(){
+            if x_pos < -constant_factor*(layout.get_width()){
                 camera.set_x(0.0);
                 world_camera.move_camera(-2, 0);
                 traveresed_whole_hex = true;
-            }else if x_pos > constant_factor*layout.get_width(){
+            }else if x_pos > constant_factor*(layout.get_width()){
                 camera.set_x(0.0);
                 world_camera.move_camera(2, 0);
                 traveresed_whole_hex = true;
@@ -308,7 +297,7 @@ fn main() {
             }
             //println!("Camera offsets are: {:?}", world_camera.offsets());
             camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-            inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
+            //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
         }
 
 
@@ -316,20 +305,28 @@ fn main() {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
             winit::event::WindowEvent::CursorMoved { device_id, position } => {
-                let mouse_y_flipped =  window.inner_size().height as f32 - position.y as f32;
-                let mouse_ndc = Vec4::new(
-                    position.x as f32 - window.inner_size().width as f32 / 2.0,
-                    (-mouse_y_flipped) + window.inner_size().height as f32 / 2.0,
-                    0.0,
-                    1.0,
+                //let mouse_y_flipped =  window.inner_size().height as f32 - position.y as f32;
+                let mouse_ndc = Vec2::new(
+                    
+                    (position.x as f32 / window.inner_size().width as f32) * 2.0 - 1.0,
+                    -((position.y as f32 / window.inner_size().height as f32) * 2.0 - 1.0),
                 );
 
-                println!("mouse_ndc: {}", mouse_ndc);
+                //let inverse = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
+                let eyespace = Mat4::inverse(&Mat4::from_cols_array_2d(&perspective));
+                let eye_space_vector = Vec4::new(mouse_ndc.x, mouse_ndc.y, -1.0, 1.0);
+                let mut eye_vector = eyespace*eye_space_vector;
+                eye_vector.z = -1.0;
+                eye_vector.w = 0.0;
+                let worldspace = Mat4::inverse(&camera_matrix);
+                let mut world_vector = worldspace*eye_vector;
+                let norm_world:Vec3 = (world_vector.xyz().normalize());
+                let intersect = ray_plane_intersect(camera.get_pos(), norm_world, Vec3::new(0.0,0.0,0.0), Vec3::new(0.0,0.0,1.0));
 
-                //println!("inversed: {}", inverse_mat*mouse_ndc);
-                let mouse_world = inverse_mat*mouse_ndc;
-                mouse_pos.x = mouse_world.x as f32;
-                mouse_pos.y = mouse_world.y as f32;
+
+                //println!("object space is: {}", Mat4::inverse(&Mat4::from_cols_array_2d(&hex_size_mat))*world_vector);
+                mouse_pos.x = intersect.x as f32;
+                mouse_pos.y = intersect.y as f32;
                 //println!("Mouse posistion became {:#?}", mouse_pos);
             }
             winit::event::WindowEvent::MouseInput { device_id, state, button } =>{
@@ -341,7 +338,6 @@ fn main() {
                 println!("Clicked hex is: {:#?}, is it EVEN or ODD: {}", clicked_hex, parity);
                 
                 let (mut clicked_x, mut clicked_y) = qoffset_from_cube(parity,&clicked_hex);
-                println!("clicked_hex is: {}", parity);
                 clicked_x += 50;
                 clicked_y += 30;
                 println!("offset coord of hex is: {}, {}", clicked_x, clicked_y);
@@ -354,7 +350,6 @@ fn main() {
                 //camera_offsets should update where the bottom left corner is in relation 
 
                 let camera_offsets = world_camera.offsets();
-                println!("Camera offsets are: {:?}", camera_offsets);
                 clicked_x += camera_offsets.0;
                 clicked_y += camera_offsets.1;
                 world_vec[(clicked_y) as usize][(clicked_x) as usize].set_biome(6);
@@ -373,13 +368,13 @@ fn main() {
                     camera.r#move(50.0*-CAMERA_SPEED*camera.get_front());
                     camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                     println!("Camera pos is: {:#?}", camera.get_pos());
-                    inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
+                    //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyE{
                     camera.r#move(50.0*CAMERA_SPEED*camera.get_front());
                     camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                     println!("Camera pos is: {:#?}", camera.get_pos());
-                    inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
+                    //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
                     world_camera.move_camera(0, 2);
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
@@ -403,7 +398,7 @@ fn main() {
             },
             winit::event::WindowEvent::Resized(window_size) => {
                 perspective = rendering::render::calculate_perspective(window_size.into());
-                inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
+                //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
                 display.resize(window_size.into());
                 width_scale = window_size.width as f64/ std_width;
                 height_scale = window_size.height as f64/ std_height;
@@ -425,7 +420,6 @@ fn main() {
                 ];
 
                 target.clear_color_and_depth((0.1, 0.4, 0.2, 1.0), 1.0);
-
                 target.draw(
                     (&hex_renderer.vbo, per_instance.per_instance().unwrap()),
                     &hex_renderer.indicies,

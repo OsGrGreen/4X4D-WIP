@@ -8,6 +8,7 @@ use std::io::BufReader;
 
 mod model_reader;
 pub mod input_handler;
+pub mod ray_library;
 
 pub fn read_shader(file_path: &str) -> String{
 
