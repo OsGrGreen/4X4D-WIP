@@ -77,7 +77,7 @@ fn main() {
 
     //Camera constants
 
-    const CAMERA_SPEED:f32 = 0.004;
+    const CAMERA_SPEED:f32 = 0.002;
 
     // Input handler
 
@@ -93,7 +93,7 @@ fn main() {
     let monitor_handle = window.primary_monitor();
     let std_width = 800.0;
     let std_height = 480.0;
-    //window.set_fullscreen(Some(Fullscreen::Borderless(monitor_handle)));
+    window.set_fullscreen(Some(Fullscreen::Borderless(monitor_handle)));
     let mut width_scale:f64 = window.inner_size().width as f64 / std_width;
     let mut height_scale:f64 = window.inner_size().height as f64 / std_height;
     println!("Inner size is: {:#?}", window.inner_size());
@@ -111,7 +111,7 @@ fn main() {
         [0.0, 0.0, 0.0, 1.0f32]
     ];
 
-    let constant_factor = 100.0;
+    let constant_factor = 1.0;
 
     println!("constant_factor is {}", constant_factor);
     
@@ -173,8 +173,8 @@ fn main() {
     //println!("Window size is: {:?}", window.inner_size().width);
     //println!("Frame buffer size is: {:?}", display.get_framebuffer_dimensions().0);
 
-    let needed_hexes_x = ((800.0) / (2.0*(100.0*layout.get_width()))*1.5) as i32;
-    let needed_hexes_y = ((480.0) / (100.0*layout.get_height())) as i32;
+    let needed_hexes_x = (((800.0) / (2.0*(100.0*layout.get_width()))) * 1.5) as i32;
+    let needed_hexes_y = (((480.0) / (100.0*layout.get_height())) * 1.5) as i32;
 
     let mut amount_of_hexes = 0;
 
@@ -227,22 +227,21 @@ fn main() {
 
     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
 
-
     let mut mouse_pos: Point = Point{x:0.0,y:0.0};
-    
 
     
     let radius = 5.0;
-
+    let mut timer2 = Instant::now();
     let mut timer = Instant::now();
     let _ = event_loop.run(move |event, window_target| {
-        
-        
-        let now = Instant::now();
+
+        println!("timer: {}", timer2.elapsed().as_millis());
+
         //Delta time calculation may be wrong...
-        let delta_time = now.duration_since(timer).as_millis() as f32;
-        //println!("Delta time is: {}", delta_time);
-        timer = now;
+        let delta_time = (timer.elapsed().as_micros() as f32/1000.0).clamp(0.18, 10.0);
+        timer = Instant::now();
+        println!("Delta time is: {}", delta_time);
+
         /*let duration = now.duration_since(timer);
         if duration.as_millis() >= 1{
             //println!("FPS: {}", (frames*1000.0) / duration.as_millis() as f32);
@@ -268,11 +267,11 @@ fn main() {
             camera.r#move(delta_time*movement[1]*CAMERA_SPEED*camera.get_up());
             let y_pos = camera.get_pos()[1];
             //Inte helt perfekt än måste fixa till lite....
-            if y_pos < -constant_factor*(3.0/2.0*(layout.get_height())){
+            if y_pos < -constant_factor*(3.0*(layout.get_height())){
                 camera.set_y(0.0);
                 world_camera.move_camera(0, -3);
                 traveresed_whole_hex = true;
-            } else if y_pos > constant_factor*(3.0/2.0*(layout.get_height())){
+            } else if y_pos > constant_factor*(3.0*(layout.get_height())){
                 camera.set_y(0.0);
                 world_camera.move_camera(0, 3);
                 traveresed_whole_hex = true;
@@ -281,11 +280,11 @@ fn main() {
             let x_pos = camera.get_pos()[0];
                         //Kom på varför det är 0.12 här och inget annat nummer...
                         //Verkar ju bara bero på hex_size och inte scale....
-            if x_pos < -constant_factor*(layout.get_width()){
+            if x_pos < -constant_factor*2.0*(layout.get_width()){
                 camera.set_x(0.0);
                 world_camera.move_camera(-2, 0);
                 traveresed_whole_hex = true;
-            }else if x_pos > constant_factor*(layout.get_width()){
+            }else if x_pos > constant_factor*2.0*(layout.get_width()){
                 camera.set_x(0.0);
                 world_camera.move_camera(2, 0);
                 traveresed_whole_hex = true;
@@ -295,7 +294,7 @@ fn main() {
             if traveresed_whole_hex{
                 draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
             }
-            //println!("Camera offsets are: {:?}", world_camera.offsets());
+            //println!("Camera pos is: {:?}", camera.get_pos());
             camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
             //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
         }
@@ -405,6 +404,7 @@ fn main() {
                 println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
+                println!("Redraw requested");
                 let dur2 = Instant::now();
                 //time += 0.02;
 
@@ -442,7 +442,7 @@ fn main() {
 
 
                 target.finish().unwrap();
-                //println!("Time for drawing frame: {}", dur2.elapsed().as_millis());
+                //println!("Time for drawing frame: {} ms", dur2.elapsed().as_millis());
             },
             _ => (),
             },
@@ -455,7 +455,7 @@ fn main() {
         // I think this solution is broken. 
         // Can get stuck in infinite screen or something
         // Works for now but needs to be fixed...
-        //println!("One frame took {} ms", now.elapsed().as_millis());
+        //println!("One frame took {} ms\n", now.elapsed().as_millis());
         frames += 1.0;
 
     });
