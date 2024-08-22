@@ -61,7 +61,8 @@ fn main() {
     println!("world vec length is {:#?} x {:#?}", world_vec.len(), world_vec[0].len());
 
     //let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,0.5), Vec3::new(0.0,0.0,0.0));
-
+    world_vec[12][25].set_biome(6);
+    world_vec[26][13].set_biome(6);
 
     // Closest camera can be: z = 2.15
     // Furtherst camera can be: z = 4.85
@@ -235,12 +236,12 @@ fn main() {
     let mut timer = Instant::now();
     let _ = event_loop.run(move |event, window_target| {
 
-        println!("timer: {}", timer2.elapsed().as_millis());
+        //println!("timer: {}", timer2.elapsed().as_millis());
 
         //Delta time calculation may be wrong...
         let delta_time = (timer.elapsed().as_micros() as f32/1000.0).clamp(0.18, 10.0);
         timer = Instant::now();
-        println!("Delta time is: {}", delta_time);
+        //println!("Delta time is: {}", delta_time);
 
         /*let duration = now.duration_since(timer);
         if duration.as_millis() >= 1{
@@ -294,7 +295,7 @@ fn main() {
             if traveresed_whole_hex{
                 draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
             }
-            //println!("Camera pos is: {:?}", camera.get_pos());
+            println!("Camera pos is: {:#?}", world_camera.offsets());
             camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
             //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
         }
@@ -320,7 +321,7 @@ fn main() {
                 let worldspace = Mat4::inverse(&camera_matrix);
                 let mut world_vector = worldspace*eye_vector;
                 let norm_world:Vec3 = (world_vector.xyz().normalize());
-                let intersect = ray_plane_intersect(camera.get_pos(), norm_world, Vec3::new(0.0,0.0,0.0), Vec3::new(0.0,0.0,1.0));
+                let intersect = ray_plane_intersect(Vec3::new(0.0,0.0,camera.get_pos().z), norm_world, Vec3::new(0.0,0.0,0.0), Vec3::new(0.0,0.0,1.0));
 
 
                 //println!("object space is: {}", Mat4::inverse(&Mat4::from_cols_array_2d(&hex_size_mat))*world_vector);
@@ -334,12 +335,12 @@ fn main() {
                 let frac_hex = layout.pixel_to_hex(&mouse_pos);
                 let clicked_hex = frac_hex.hex_round();
                 let parity:i32 = 1 - 2 * (clicked_hex.get_r() & 1);
-                println!("Clicked hex is: {:#?}, is it EVEN or ODD: {}", clicked_hex, parity);
+                println!("Clicked hex is: {:#?}, is it EVEN or ODD: {}", clicked_hex, ODD);
                 
-                let (mut clicked_x, mut clicked_y) = qoffset_from_cube(parity,&clicked_hex);
-                clicked_x += 50;
-                clicked_y += 30;
-                println!("offset coord of hex is: {}, {}", clicked_x, clicked_y);
+                let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);
+                println!("{}, {}", (needed_hexes_x/2), (needed_hexes_y/2));
+                clicked_y = 25 - clicked_y as isize;
+                clicked_x = 12 - clicked_x as isize;
 
                 //But these are the coordinates on the screen..
                 //Now they have to be translated into world coordinates
@@ -349,9 +350,18 @@ fn main() {
                 //camera_offsets should update where the bottom left corner is in relation 
 
                 let camera_offsets = world_camera.offsets();
-                clicked_x += camera_offsets.0;
-                clicked_y += camera_offsets.1;
-                world_vec[(clicked_y) as usize][(clicked_x) as usize].set_biome(6);
+
+                //Make these then loop when crossing over the boundary.
+                clicked_x += camera_offsets.1; 
+                clicked_y += camera_offsets.0;
+
+                println!("offset coord of hex is: {}, {}", clicked_y, clicked_x);
+
+                println!("offset coord of hex is: {}, {}", clicked_y, clicked_x);
+
+                //world_vec[(clicked_x) as usize][(clicked_y-2) as usize].set_biome(6);
+                //world_vec[(clicked_x) as usize][(clicked_y+2) as usize].set_biome(6);
+                world_vec[(clicked_x) as usize][(clicked_y) as usize].set_biome(7);
                 draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
             }
 
@@ -375,7 +385,7 @@ fn main() {
                     println!("Camera pos is: {:#?}", camera.get_pos());
                     //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
-                    world_camera.move_camera(0, 2);
+                    world_camera.move_camera(0, 1);
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyH && event.state.is_pressed(){
@@ -383,7 +393,7 @@ fn main() {
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyJ && event.state.is_pressed(){
-                    world_camera.move_camera(0, -2);
+                    world_camera.move_camera(0, -1);
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyK && event.state.is_pressed(){
@@ -404,7 +414,7 @@ fn main() {
                 println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
-                println!("Redraw requested");
+                //println!("Redraw requested");
                 let dur2 = Instant::now();
                 //time += 0.02;
 
