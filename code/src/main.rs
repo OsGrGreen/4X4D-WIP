@@ -335,15 +335,12 @@ fn main() {
                     
                     let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);
                     //println!("{}, {}", (needed_hexes_x/2), (needed_hexes_y/2));
+                    
+                    
+                    //Make these not hard coded...
+                    // And move out into seperate function
                     clicked_y = 25 - clicked_y as isize;
                     clicked_x = 12 - clicked_x as isize;
-    
-                    //But these are the coordinates on the screen..
-                    //Now they have to be translated into world coordinates
-                    //Which I dont really know how to do right now...
-    
-    
-                    //camera_offsets should update where the bottom left corner is in relation 
     
                     let camera_offsets = world_camera.offsets();
     
@@ -352,15 +349,16 @@ fn main() {
                     clicked_y += camera_offsets.0;
 
                     if clicked_x <= 0{
-                        clicked_x = (NUM_COLMS) as isize + clicked_x;
+                        clicked_x = ((NUM_COLMS) as isize + clicked_x) % NUM_COLMS as isize;
                     }else if clicked_x >= NUM_COLMS as isize{
-                        clicked_x = clicked_x - (NUM_COLMS) as isize;
+                        clicked_x = (clicked_x - (NUM_COLMS) as isize) % NUM_COLMS as isize;
                     }  
+                    
 
                     if clicked_y <= 0{
-                        clicked_y = (NUM_ROWS) as isize + clicked_y;
+                        clicked_y = ((NUM_ROWS) as isize + clicked_y) % NUM_ROWS as isize;
                     }else if clicked_y >= NUM_ROWS as isize{
-                        clicked_y = clicked_y - (NUM_ROWS) as isize;
+                        clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
                     }  
     
                     //world_vec[(clicked_x) as usize][(clicked_y-2) as usize].set_biome(6);
