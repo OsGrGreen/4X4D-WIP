@@ -6,5 +6,5 @@ pub mod tile;
 pub mod offset_coords;
 
 //Must be divisible by 2
-pub const NUM_ROWS:usize = 50;
-pub const NUM_COLMS:usize = 30;
+pub const NUM_ROWS:usize = 30;
+pub const NUM_COLMS:usize = 35;

@@ -3,7 +3,7 @@ extern crate glium;
 extern crate winit;
 use rand::{distr::{Distribution, Uniform}, Rng};
 use glam::{Mat4, Vec2, Vec3, Vec4, Vec4Swizzles};
-use util::{input_handler::{self, InputHandler}, ray_library::ray_plane_intersect, read_model};
+use util::{input_handler::{self, InputHandler}, ray_library::{ndc_to_intersection, ray_plane_intersect}, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
 use world::{draw_functions::{self, cantor_2}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, EVEN, ODD, SQRT3}, offset_coords::{self, qoffset_from_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
@@ -151,7 +151,7 @@ fn main() {
     let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
     let mut frames:f32 = 0.0;
 
-    let mut transformation_mat = (Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat));
+    let mut transformation_mat = (perspective*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat));
     let mut inverse_transformation_mat = Mat4::inverse(&transformation_mat);
 
     let params = glium::DrawParameters {
@@ -230,7 +230,7 @@ fn main() {
 
     let mut mouse_pos: Point = Point{x:0.0,y:0.0};
 
-    
+    let mut mouse_ndc: Vec3 = Vec3::ZERO;
     let radius = 5.0;
     let mut timer2 = Instant::now();
     let mut timer = Instant::now();
@@ -295,7 +295,9 @@ fn main() {
             if traveresed_whole_hex{
                 draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
             }
-            println!("Camera pos is: {:#?}", world_camera.offsets());
+            let intersect = ndc_to_intersection(&mouse_ndc,&camera_matrix,camera.get_pos(),&perspective);
+            mouse_pos.x = intersect.x as f32;
+            mouse_pos.y = intersect.y as f32;
             camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
             //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
         }
@@ -305,47 +307,34 @@ fn main() {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
             winit::event::WindowEvent::CursorMoved { device_id, position } => {
-                //let mouse_y_flipped =  window.inner_size().height as f32 - position.y as f32;
                 
 
                 // Still some problem with this code?
                 // Could probably be some rounding errors...
                 // How could one fix this?
                 // Scale everything maybe to use bigger numbers?
-                let mouse_ndc = Vec2::new(
+                mouse_ndc = Vec3::new(
                     (position.x as f32 / window.inner_size().width as f32) * 2.0 - 1.0,
                     -((position.y as f32 / window.inner_size().height as f32) * 2.0 - 1.0),
+                    0.0,
                 );
 
-                //let inverse = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat)));
-                let eyespace = Mat4::inverse(&Mat4::from_cols_array_2d(&perspective));
-                let eye_space_vector = Vec4::new(mouse_ndc.x, mouse_ndc.y, -1.0, 1.0);
-                let mut eye_vector = eyespace*eye_space_vector;
-                eye_vector.z = -1.0;
-                eye_vector.w = 0.0;
-                let worldspace = Mat4::inverse(&camera_matrix);
-                let mut world_vector = worldspace*eye_vector;
-                let norm_world:Vec3 = (world_vector.xyz().normalize());
-                let intersect = ray_plane_intersect(Vec3::new(-camera.get_pos().x,-camera.get_pos().y,camera.get_pos().z), norm_world, Vec3::new(0.0,0.0,0.0), Vec3::new(0.0,0.0,1.0));
-                println!("Intersection is at: {}", intersect);
+                let intersect = ndc_to_intersection(&mouse_ndc,&camera_matrix,camera.get_pos(),&perspective);
 
-                //println!("object space is: {}", Mat4::inverse(&Mat4::from_cols_array_2d(&hex_size_mat))*world_vector);
+
                 mouse_pos.x = intersect.x as f32;
                 mouse_pos.y = intersect.y as f32;
-                //println!("Mouse posistion became {:#?}", mouse_pos);
             }
             winit::event::WindowEvent::MouseInput { device_id, state, button } =>{
                 if state.is_pressed(){
 
-                    println!("Clicked {:#?}", mouse_pos);
                     //println!("Dimension is: {:#?}", window.inner_size());
                     let frac_hex = layout.pixel_to_hex(&mouse_pos);
                     let clicked_hex = frac_hex.hex_round();
                     let parity:i32 = 1 - 2 * (clicked_hex.get_r() & 1);
-                    println!("Clicked hex is: {:#?}, is it EVEN or ODD: {}", clicked_hex, ODD);
                     
                     let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);
-                    println!("{}, {}", (needed_hexes_x/2), (needed_hexes_y/2));
+                    //println!("{}, {}", (needed_hexes_x/2), (needed_hexes_y/2));
                     clicked_y = 25 - clicked_y as isize;
                     clicked_x = 12 - clicked_x as isize;
     
@@ -361,10 +350,18 @@ fn main() {
                     //Make these then loop when crossing over the boundary.
                     clicked_x += camera_offsets.1; 
                     clicked_y += camera_offsets.0;
-    
-                    println!("offset coord of hex is: {}, {}", clicked_y, clicked_x);
-    
-                    println!("offset coord of hex is: {}, {}", clicked_y, clicked_x);
+
+                    if clicked_x <= 0{
+                        clicked_x = (NUM_COLMS) as isize + clicked_x;
+                    }else if clicked_x >= NUM_COLMS as isize{
+                        clicked_x = clicked_x - (NUM_COLMS) as isize;
+                    }  
+
+                    if clicked_y <= 0{
+                        clicked_y = (NUM_ROWS) as isize + clicked_y;
+                    }else if clicked_y >= NUM_ROWS as isize{
+                        clicked_y = clicked_y - (NUM_ROWS) as isize;
+                    }  
     
                     //world_vec[(clicked_x) as usize][(clicked_y-2) as usize].set_biome(6);
                     //world_vec[(clicked_x) as usize][(clicked_y+2) as usize].set_biome(6);
@@ -385,13 +382,11 @@ fn main() {
                 else if event.physical_key == keyboard::KeyCode::KeyQ && event.state.is_pressed(){
                     camera.r#move(50.0*-CAMERA_SPEED*camera.get_front());
                     camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-                    println!("Camera pos is: {:#?}", camera.get_pos());
                     //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyE{
                     camera.r#move(50.0*CAMERA_SPEED*camera.get_front());
                     camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-                    println!("Camera pos is: {:#?}", camera.get_pos());
                     //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
                     world_camera.move_camera(0, 1);
@@ -443,7 +438,7 @@ fn main() {
                     (&hex_renderer.vbo, per_instance.per_instance().unwrap()),
                     &hex_renderer.indicies,
                     &hex_renderer.program,
-                    &uniform! { model: hex_size_mat, projection: perspective, view:camera_matrix.to_cols_array_2d()},
+                    &uniform! { model: hex_size_mat, projection: perspective.to_cols_array_2d(), view:camera_matrix.to_cols_array_2d()},
                     &glium::DrawParameters {
                         depth: glium::Depth {
                             test: glium::DepthTest::IfLess,

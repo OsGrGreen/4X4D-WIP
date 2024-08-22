@@ -89,7 +89,7 @@ impl Renderer{
         }
 }  
 
-pub fn calculate_perspective(dim: (f32, f32)) -> [[f32; 4]; 4]{
+pub fn calculate_perspective(dim: (f32, f32)) -> Mat4{
     let perspective = {
         let (width, height) = dim;
         let aspect_ratio = height as f32 / width as f32;
@@ -107,7 +107,7 @@ pub fn calculate_perspective(dim: (f32, f32)) -> [[f32; 4]; 4]{
         ]
     };
 
-    return perspective
+    return Mat4::from_cols_array_2d(&perspective)
 }
 
 pub fn point_to_Vertex(p: Point) -> Vertex{
