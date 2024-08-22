@@ -306,8 +306,13 @@ fn main() {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
             winit::event::WindowEvent::CursorMoved { device_id, position } => {
                 //let mouse_y_flipped =  window.inner_size().height as f32 - position.y as f32;
+                
+
+                // Still some problem with this code?
+                // Could probably be some rounding errors...
+                // How could one fix this?
+                // Scale everything maybe to use bigger numbers?
                 let mouse_ndc = Vec2::new(
-                    
                     (position.x as f32 / window.inner_size().width as f32) * 2.0 - 1.0,
                     -((position.y as f32 / window.inner_size().height as f32) * 2.0 - 1.0),
                 );
@@ -321,8 +326,8 @@ fn main() {
                 let worldspace = Mat4::inverse(&camera_matrix);
                 let mut world_vector = worldspace*eye_vector;
                 let norm_world:Vec3 = (world_vector.xyz().normalize());
-                let intersect = ray_plane_intersect(Vec3::new(0.0,0.0,camera.get_pos().z), norm_world, Vec3::new(0.0,0.0,0.0), Vec3::new(0.0,0.0,1.0));
-
+                let intersect = ray_plane_intersect(Vec3::new(-camera.get_pos().x,-camera.get_pos().y,camera.get_pos().z), norm_world, Vec3::new(0.0,0.0,0.0), Vec3::new(0.0,0.0,1.0));
+                println!("Intersection is at: {}", intersect);
 
                 //println!("object space is: {}", Mat4::inverse(&Mat4::from_cols_array_2d(&hex_size_mat))*world_vector);
                 mouse_pos.x = intersect.x as f32;
@@ -330,39 +335,43 @@ fn main() {
                 //println!("Mouse posistion became {:#?}", mouse_pos);
             }
             winit::event::WindowEvent::MouseInput { device_id, state, button } =>{
-                println!("Clicked {:#?}", mouse_pos);
-                //println!("Dimension is: {:#?}", window.inner_size());
-                let frac_hex = layout.pixel_to_hex(&mouse_pos);
-                let clicked_hex = frac_hex.hex_round();
-                let parity:i32 = 1 - 2 * (clicked_hex.get_r() & 1);
-                println!("Clicked hex is: {:#?}, is it EVEN or ODD: {}", clicked_hex, ODD);
-                
-                let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);
-                println!("{}, {}", (needed_hexes_x/2), (needed_hexes_y/2));
-                clicked_y = 25 - clicked_y as isize;
-                clicked_x = 12 - clicked_x as isize;
+                if state.is_pressed(){
 
-                //But these are the coordinates on the screen..
-                //Now they have to be translated into world coordinates
-                //Which I dont really know how to do right now...
+                    println!("Clicked {:#?}", mouse_pos);
+                    //println!("Dimension is: {:#?}", window.inner_size());
+                    let frac_hex = layout.pixel_to_hex(&mouse_pos);
+                    let clicked_hex = frac_hex.hex_round();
+                    let parity:i32 = 1 - 2 * (clicked_hex.get_r() & 1);
+                    println!("Clicked hex is: {:#?}, is it EVEN or ODD: {}", clicked_hex, ODD);
+                    
+                    let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);
+                    println!("{}, {}", (needed_hexes_x/2), (needed_hexes_y/2));
+                    clicked_y = 25 - clicked_y as isize;
+                    clicked_x = 12 - clicked_x as isize;
+    
+                    //But these are the coordinates on the screen..
+                    //Now they have to be translated into world coordinates
+                    //Which I dont really know how to do right now...
+    
+    
+                    //camera_offsets should update where the bottom left corner is in relation 
+    
+                    let camera_offsets = world_camera.offsets();
+    
+                    //Make these then loop when crossing over the boundary.
+                    clicked_x += camera_offsets.1; 
+                    clicked_y += camera_offsets.0;
+    
+                    println!("offset coord of hex is: {}, {}", clicked_y, clicked_x);
+    
+                    println!("offset coord of hex is: {}, {}", clicked_y, clicked_x);
+    
+                    //world_vec[(clicked_x) as usize][(clicked_y-2) as usize].set_biome(6);
+                    //world_vec[(clicked_x) as usize][(clicked_y+2) as usize].set_biome(6);
+                    world_vec[(clicked_x) as usize][(clicked_y) as usize].set_biome(7);
+                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
 
-
-                //camera_offsets should update where the bottom left corner is in relation 
-
-                let camera_offsets = world_camera.offsets();
-
-                //Make these then loop when crossing over the boundary.
-                clicked_x += camera_offsets.1; 
-                clicked_y += camera_offsets.0;
-
-                println!("offset coord of hex is: {}, {}", clicked_y, clicked_x);
-
-                println!("offset coord of hex is: {}, {}", clicked_y, clicked_x);
-
-                //world_vec[(clicked_x) as usize][(clicked_y-2) as usize].set_biome(6);
-                //world_vec[(clicked_x) as usize][(clicked_y+2) as usize].set_biome(6);
-                world_vec[(clicked_x) as usize][(clicked_y) as usize].set_biome(7);
-                draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                }
             }
 
             // TODO
