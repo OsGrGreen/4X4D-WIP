@@ -46,7 +46,20 @@ If no other player is still standing, the remaining player wins.
 
 ## Tiles
 
-### Resoruces
+Each tile can have one improvement, one building and one unit on it a a time. 
+Controlling a tile will give you a resource corresponding to the type of the tile. 
+Improving a tile will give you extra of that resource and any material that is on that tile. 
+
+Yield from tiles will diminish throughout the game, making having improvements very important.
+(Question is if all tiles have the same decline or if just controlled tiles have this decline (would be harder but more realistic ig))
+
+Furthermore, tiles can have cities and buildings on them. 
+
+### Cities
+
+Cities have happines and population.
+
+### Resources
 
 #### Loss
 
