@@ -11,6 +11,20 @@ Another big focus is that the world is (mostly in the second part of the game) i
 
 ## Goals
 
+### Victory conditions
+
+#### Conquest
+
+By occupying every other factions capital at the same time ( at any point in the game) will instantly finish the game with the remaining player being the victor
+
+#### Awakening
+
+By finishing the "science" tree and descending your god unto the mortal plane through a ritual, the summonee instantly wins the game.
+
+#### Fulfillment
+
+After having reached sufficient enough connection with your god, you can at any point decide to forego all other win conditions (not sure if all yet or only points) and instead opt to try complete some tasks/quests/specifics given from your god
+
 ## Turn
 
 ## Tiles
