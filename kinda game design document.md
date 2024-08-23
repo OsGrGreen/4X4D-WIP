@@ -44,9 +44,16 @@ If no other player is still standing, the remaining player wins.
 
 ## Turn
 
+A turn is very similiar to normal 4x games, however one does not have unlimited actions like in for example [[civ]], but is closer to [[solium infernum]] or [[old world]] in the sense that the player only has a set amount of actions each turn.
+This forces the player to makes choices of how to spend their turns, since doing everything is not an option.
+
 ## Actions
 
 ## Turn order bidding
+
+In turn-based games the turn order is generally really important since that can determine who fights first in a battle, has priority when taking tiles or creating wonders. For this reason the players can bid "faith" to determine the turn order. Whoever bids the most will go first, the second most second and so on. In a tie the player who was last the last turn will go first. 
+
+If no bids were made then the turn order circually goes around. 
 
 ## Tiles
 
