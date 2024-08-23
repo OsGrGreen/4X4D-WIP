@@ -25,6 +25,19 @@ By finishing the "science" tree and descending your god unto the mortal plane th
 
 After having reached sufficient enough connection with your god, you can at any point decide to forego all other win conditions (not sure if all yet or only points) and instead opt to try complete some tasks/quests/specifics given from your god
 
+#### Score
+
+If no one has won when the whole game has passed, and the whole world has disappeared then the person with the highest score wins
+
+#### Survival
+
+If no other player is still standing, the remaining player wins.
+
+
+#### Maybe? 
+
+- Hold some objectives for a certain amount of time? 
+
 ## Turn
 
 ## Tiles
