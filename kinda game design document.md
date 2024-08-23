@@ -57,13 +57,48 @@ Furthermore, tiles can have cities and buildings on them.
 
 ### Cities
 
-Cities have happines and population.
+Cities have happines and population as well as upgrades.
 
-### Resources
+### Base resources
+
+- Food
+   - Used to feed and create new population
+   - If you have no feed, the population will get angry and pregress will stagnate.
+- Wood (Should be able to be saved in some way, since the name of the game is saving stuff)
+   - Used mainly for creating buildings
+   - Also used by population (to keep them baseline happy)
+   - If you have no wood then creating new buildings will be hard and people will be mad.
+- Minerals
+   - Mainly used for creating units (together with other stuff sometimes)
+   - If you have no minerals both attacking and defending will be hard 
+- Faith/Offerings
+   - Used as both money and science.
+   - By using faith one can get other resources from a god (if no other player wants to trade for it).
+   - Can hasten building of things
+   - Provide buffs to units
+   - Create a deeper bond (progress connection/science level) to a god
+
+#### Gain
+
+Food, Wood and Minerals can directly be gained from controlling the right kind of tile and a greater quality of them from improving the correct tile. 
+Resources and their corresponding tiles are:
+
+- Woods: Wood
+- Plains: Food
+- Hills: Wood/Food/Minerals (however in lesser amounts)
+- Mountains: Mineral
+- Sea: Food/Minerals
+- Desert: None (if not under the correct circumstances)
+
+Faith/offerings are directly gained from population. The higher population the greater faith will be gained. 
+It is also possible to create buildings that will generate more and make each pop create more.
+
+Another way to get the base resources is to pillage other players. By occupying other players cities and or buildings the pillager will gain a large amount of resources from the pillaged player. 
+This is different from a war in the sense that the pillaged player will not actually lose the buildings, city or population. 
 
 #### Loss
 
-#### Gain
+### Materials
 
 ### Improvements
 
