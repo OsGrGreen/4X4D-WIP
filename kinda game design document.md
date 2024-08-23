@@ -44,6 +44,10 @@ If no other player is still standing, the remaining player wins.
 
 ## Turn
 
+## Actions
+
+## Turn order bidding
+
 ## Tiles
 
 Each tile can have one improvement, one building and one unit on it a a time. 
@@ -98,9 +102,29 @@ This is different from a war in the sense that the pillaged player will not actu
 
 #### Loss
 
+To progress your civilization requires resources. Without them you become stagnant and will be conquered by the opposing players. 
+
+It also costs resources to keep your civilization going, therefore it is important to know when to cut of limbs that are no longer useful. 
+
 ### Materials
 
 ### Improvements
+
+Improvements are easy to construct. A city can improve nearby tiles. This should be simple to do, simply choose what kind of tile you want to improve and it will be done automatically (maybe with possibility of more fine grained control). 
+
+Improving a tile should not inherently cost and resources, however should not be free. One should not be able to expand their economy at the same time as doing other stuff. This cost could come in the form of costing actions or/and taking multiple turns to finish. 
+
+### Cities
+
+Cities are a players stronghold, with them being at the center of a lot of mechanics. 
+
+It is from them players create units, buildings, do rituals, store resources and much more.
+
+However, they also contain factions having different goals for your civilization which can make cities rebel or possibly desert. 
+
+Cities can be created in the first phase of the game, but not in the second. 
+
+### Buildings
 
 ## Units
 
@@ -109,3 +133,7 @@ This is different from a war in the sense that the pillaged player will not actu
 ### Satisfaction
 
 ### Rebellions
+
+## Religion/Science
+
+
