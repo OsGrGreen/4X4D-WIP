@@ -29,6 +29,10 @@ After having reached sufficient enough connection with your god, you can at any 
 
 If no one has won when the whole game has passed, and the whole world has disappeared then the person with the highest score wins
 
+#### Alliance
+
+If a player is allied with all other remaning players they win (maybe not instantly).
+
 #### Survival
 
 If no other player is still standing, the remaining player wins.
