@@ -9,4 +9,4 @@ pub mod offset_coords;
 pub const NUM_ROWS:usize = 200;
 pub const NUM_COLMS:usize = 200;
 
-pub static tile_yield:u32 = 2;
+pub static TILE_YIELD:u32 = 2;

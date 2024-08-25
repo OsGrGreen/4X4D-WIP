@@ -15,9 +15,9 @@ const SQRT3:f32 = 1.7320508;
 
 impl RenderCamera{
 
-    pub fn new(startPos: Vec3, target:Vec3, up:Vec3, front:Vec3) -> RenderCamera{
+    pub fn new(start_pos: Vec3, target:Vec3, up:Vec3, front:Vec3) -> RenderCamera{
 
-        RenderCamera{camera_pos:startPos, camera_target:target,camera_up:up, camera_front:front}
+        RenderCamera{camera_pos:start_pos, camera_target:target,camera_up:up, camera_front:front}
     }
 
     pub fn get_pos(&self) -> Vec3{

@@ -1,19 +1,19 @@
 #[macro_use]
 extern crate glium;
 extern crate winit;
-use improvements::{building::Building, city::City, resource::{Resource, Resource_Counter}};
-use rand::{distr::{Distribution, Uniform}, Rng};
-use glam::{Mat4, Vec2, Vec3, Vec4, Vec4Swizzles};
-use util::{input_handler::{self, InputHandler}, ray_library::{ndc_to_intersection, ray_plane_intersect}, read_model};
-use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
-use glium::{backend::{glutin, Facade}, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
-use world::{draw_functions::{self, cantor_2, BIOME_TO_TEXTURE}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, EVEN, ODD, SQRT3}, offset_coords::{self, qoffset_from_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
-use std::{alloc::Layout, io::stdout, mem::{self, size_of}, time::{Duration, Instant}};
+use improvements::{building::Building, city::City, resource::{Resource, ResourceCounter}};
+use rand::distr::{Distribution, Uniform};
+use glam::{Mat4, Vec3, Vec4};
+use util::{input_handler::InputHandler, ray_library::ndc_to_intersection};
+use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
+use glium::{glutin::surface::WindowSurface, implement_vertex, Display, Surface};
+use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
+use std::time::{Instant};
 use glium::PolygonMode::Line;
 
 
 mod rendering;
-use rendering::{render::{array_to_VBO, Vertex_Simple}, render_camera::{self, RenderCamera}};
+use rendering::{render::array_to_VBO, render_camera::RenderCamera};
 
 
 mod improvements;
@@ -31,7 +31,7 @@ struct Attr {
 implement_vertex!(Attr, world_position, colour, tex_offsets);
 
 
-fn pointy_hex_corner(center: Point, size: usize, i: i32) -> Point {
+fn _pointy_hex_corner(center: Point, size: usize, i: i32) -> Point {
     let angle_deg = 60.0 * i as f32 - 30.0;
     let angle_rad = std::f32::consts::PI / 180.0 * angle_deg;
     Point {
@@ -118,14 +118,9 @@ fn main() {
     
 
     let hex = Hex::new(0, 0, 0);
-    let layout = Hex_Layout::new_flat(Point{x:hex_size/hex_scale,y:hex_size/hex_scale},Point{x:0.0,y:0.0});
+    let layout = HexLayout::new_flat(Point{x:hex_size/hex_scale,y:hex_size/hex_scale},Point{x:0.0,y:0.0});
     let corners = layout.polygon_corners(&hex); 
     let mut world_camera = WorldCamera::new((NUM_ROWS, NUM_COLMS));
-
-    println!("New hex each {} x", layout.size.x as f32*(0.01+hex_scale));
-    let FOV = std::f32::consts::PI / 3.0;
-    let screen_hex_width = (layout.get_width()*1920.0)/(2.0*camera.get_pos().z*(FOV/2.0).tan());
-    println!("screen hex width is: {}", screen_hex_width);
 
 
     let hex_vert_2 = array_to_VBO(corners);
@@ -145,7 +140,6 @@ fn main() {
 
 
     //Read textures
-    let image_timer = Instant::now();
     let tile_texture_atlas_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\texture_atlas_tiles.png")),
                         image::ImageFormat::Png).unwrap().to_rgba8();
     let image_dimensions = tile_texture_atlas_image.dimensions();
@@ -155,32 +149,13 @@ fn main() {
     //Setup renderprograms
     //println!("{:#?}", &hex_vert_2);
     let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display).unwrap();
-    let trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display).unwrap();
+    let _trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display).unwrap();
     
-    let light = [-1.0, 0.4, 0.9f32];
+    let _light = [-1.0, 0.4, 0.9f32];
 
     let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
     let mut frames:f32 = 0.0;
 
-    let mut transformation_mat = (perspective*camera_matrix*Mat4::from_cols_array_2d(&hex_size_mat));
-    let mut inverse_transformation_mat = Mat4::inverse(&transformation_mat);
-
-    let params = glium::DrawParameters {
-        //To enable backfaceculling uncomment this
-        /* depth: glium::Depth {
-            test: glium::DepthTest::IfLess,
-            write: true,
-            .. Default::default()
-        },
-        backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise, */
-        depth: glium::Depth {
-            test: glium::draw_parameters::DepthTest::IfLess,
-            write: true,
-            .. Default::default()
-        },
-        //backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
-        .. Default::default()
-    };
 
     //println!("Window size is: {:?}", window.inner_size().width);
     //println!("Frame buffer size is: {:?}", display.get_framebuffer_dimensions().0);
@@ -241,35 +216,19 @@ fn main() {
     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
 
     let mut mouse_pos: Point = Point{x:0.0,y:0.0};
-
     let mut mouse_ndc: Vec3 = Vec3::ZERO;
-    let radius = 5.0;
-    let mut timer2 = Instant::now();
+
     let mut timer = Instant::now();
     let _ = event_loop.run(move |event, window_target| {
 
         //println!("timer: {}", timer2.elapsed().as_millis());
 
         //Delta time calculation may be wrong...
+        //There is kinda of stuttery movement...
+        //Could also be movement calculations...
         let delta_time = (timer.elapsed().as_micros() as f32/1000.0).clamp(0.18, 10.0);
         timer = Instant::now();
-        //println!("Delta time is: {}", delta_time);
 
-        /*let duration = now.duration_since(timer);
-        if duration.as_millis() >= 1{
-            //println!("FPS: {}", (frames*1000.0) / duration.as_millis() as f32);
-            frames = 0.0;
-            timer = Instant::now();
-        }*/
-
-        //let camX = (timer.elapsed().as_millis() as f32 / 1000.0).sin()*radius;
-        //let camZ = (timer.elapsed().as_millis() as f32 / 1000.0).cos()*radius;
-        //println!("CamX is {}, camZ is: {}", camX, camZ);
-        //camera_matrix = RenderCamera::look_at_glm(Vec3::new(camX,0.0,camZ), Vec3::new(0.0,0.0,0.0),Vec3::new(0.0,1.0,0.0));
-
-    
-        //let mut change_x = 0.0;
-        //let mut change_y = 0.0;
 
         //Update movement (Kanske göra efter allt annat... possibly):
         let mut movement = input_handler.get_movement();
@@ -320,7 +279,7 @@ fn main() {
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
-            winit::event::WindowEvent::CursorMoved { device_id, position } => {
+            winit::event::WindowEvent::CursorMoved { device_id: _, position } => {
                 
 
                 // Still some problem with this code?
@@ -339,17 +298,14 @@ fn main() {
                 mouse_pos.x = intersect.x as f32;
                 mouse_pos.y = intersect.y as f32;
             }
-            winit::event::WindowEvent::MouseInput { device_id, state, button } =>{
+            winit::event::WindowEvent::MouseInput { device_id: _, state, button } =>{
                 if state.is_pressed(){
 
                     //println!("Dimension is: {:#?}", window.inner_size());
                     let frac_hex = layout.pixel_to_hex(&mouse_pos);
                     let clicked_hex = frac_hex.hex_round();
-                    let parity:i32 = 1 - 2 * (clicked_hex.get_r() & 1);
                     
-                    let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);
-                    //println!("{}, {}", (needed_hexes_x/2), (needed_hexes_y/2));
-                    
+                    let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);                    
                     
                     //Make these not hard coded...
                     // And move out into seperate function
@@ -374,12 +330,10 @@ fn main() {
                     }else if clicked_y >= NUM_ROWS as isize{
                         clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
                     }  
-    
-                    //world_vec[(clicked_x) as usize][(clicked_y-2) as usize].set_biome(6);
-                    //world_vec[(clicked_x) as usize][(clicked_y+2) as usize].set_biome(6);
+
+                    // Do not do the update here (add it to the job queue)
                     let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
                     world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
-                    //Make seperate function that only updates the clicked tile when doing this...
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
                     println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
                 }
@@ -387,7 +341,7 @@ fn main() {
 
             // TODO
             // Make input a little bit nicer
-            winit::event::WindowEvent::KeyboardInput { device_id, event, is_synthetic: _ } =>{
+            winit::event::WindowEvent::KeyboardInput { device_id: _, event, is_synthetic: _ } =>{
 
                 //Handle other inputs
                 if event.physical_key == keyboard::KeyCode::Escape && event.state.is_pressed(){
@@ -479,7 +433,7 @@ fn main() {
         // Can get stuck in infinite screen or something
         // Works for now but needs to be fixed...
         //println!("One frame took {} ms\n", now.elapsed().as_millis());
-        frames += 1.0;
+        frames = frames + 1.0;
 
     });
 }

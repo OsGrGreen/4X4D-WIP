@@ -38,25 +38,25 @@ pub struct Point {
 // See notes for the implementation design: https://www.redblobgames.com/grids/hexagons/implementation.html
 // Possibly have vectors/matricies and use multiplication
 #[derive(Copy, Clone,Debug)]
-pub struct Hex_Layout{
+pub struct HexLayout{
     orientation: Orientation,
     pub size: Point,
     origin: Point,
     is_flat: bool,
 }
 
-impl Hex_Layout {
+impl HexLayout {
     
-    pub const fn new(ori:Orientation,size:Point,origin:Point) -> Hex_Layout{
-        Hex_Layout { orientation: ori, size: size, origin: origin, is_flat:false}
+    pub const fn new(ori:Orientation,size:Point,origin:Point) -> HexLayout{
+        HexLayout { orientation: ori, size: size, origin: origin, is_flat:false}
     }
 
-    pub fn new_flat(size:Point,origin:Point) -> Hex_Layout{
-        Hex_Layout { orientation: layout_flat, size: size, origin: origin,is_flat:true}
+    pub fn new_flat(size:Point,origin:Point) -> HexLayout{
+        HexLayout { orientation: layout_flat, size: size, origin: origin,is_flat:true}
     }
 
-    pub fn new_pointy(size:Point,origin:Point) -> Hex_Layout{
-        Hex_Layout { orientation: layout_pointy, size: size, origin: origin, is_flat:false}
+    pub fn new_pointy(size:Point,origin:Point) -> HexLayout{
+        HexLayout { orientation: layout_pointy, size: size, origin: origin, is_flat:false}
     }
 
     pub fn get_height(&self) -> f32{

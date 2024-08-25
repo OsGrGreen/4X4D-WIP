@@ -3,10 +3,9 @@ use std::fs;
 use std::fs::File;
 use std::io::BufRead;
 use crate::rendering::render::Vertex;
-use crate::rendering::render::Vertex_Simple;
+use crate::rendering::render::VertexSimple;
 use std::io::BufReader;
 
-mod model_reader;
 pub mod input_handler;
 pub mod ray_library;
 

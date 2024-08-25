@@ -1,4 +1,4 @@
-use super::tile_yield;
+use super::TILE_YIELD;
 
 #[derive(Copy, Clone,Debug)]
 pub struct Tile{
@@ -79,7 +79,7 @@ impl Tile{
         let occupied_modifier = self.get_occupied() as u32 * OCCUPIED_FACTOR;
         let r#type = self.get_biome() as u32;
 
-        return (r#type, tile_yield*improve_modifier-occupied_modifier)
+        return (r#type, TILE_YIELD*improve_modifier-occupied_modifier)
     }
 
 }

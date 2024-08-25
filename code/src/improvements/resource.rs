@@ -14,7 +14,7 @@ impl<'a> Resource<'a>{
 
 }
 
-pub struct Resource_Counter<'a>{
+pub struct ResourceCounter<'a>{
     pub r#type: Resource<'a>,
     player_id: u32, //Maybe not needed since you do not need to store what player has what resources. But could be nice for the server ig
     quantity: i32,
@@ -23,10 +23,10 @@ pub struct Resource_Counter<'a>{
     consumption_rate: i32,
 }
 
-impl<'a> Resource_Counter<'a>{
+impl<'a> ResourceCounter<'a>{
 
-    pub fn new(resource:Resource<'a>, player: u32, inital_quantity:i32, initial_capacity:i32) -> Resource_Counter{
-        Resource_Counter{
+    pub fn new(resource:Resource<'a>, player: u32, inital_quantity:i32, initial_capacity:i32) -> ResourceCounter{
+        ResourceCounter{
             r#type:resource,
             player_id: player,
             quantity: inital_quantity,

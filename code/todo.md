@@ -31,11 +31,15 @@ I think this should minimize the amount of memory needed.
 
 - [x] Create texture atlas for hex textures
 - [x] Make each hex able to have a texture (from the atlas)
+- [ ] Remove RUSTc  warnings
 - [ ] Make Draw functions
     - [ ] Draw Square
     - [ ] Draw line
     - [ ] Draw text
     - [ ] Draw texture
+- [ ] Make program use multiple threads
+    - [ ] Make a good division of code
+    - [ ] Decide what kind of multi-thread model to use
 - [ ] Add units
     - [ ] Have some clever way to know when to render units
     - [ ] Make code for automatically adding units to be rendered
