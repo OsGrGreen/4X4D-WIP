@@ -62,11 +62,23 @@ pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tile
             traveresd_hexes = -1;
         }
         traveresd_hexes += 1;
+
+        let mut final_colour = current_tile.get_biome_colour();
+
+
+        /*
+        * Add logic for changing tile if it is improved here... 
+        */
+        if current_tile.get_improved() == 1{
+            for c in &mut final_colour{
+                *c -= 0.4;
+            }
+        }
         
         
         mapping.set(i,Attr {
             world_position: hex.world_position,
-            colour: current_tile.get_biome_colour(),
+            colour: final_colour,
         });
     }
     //println!("Time elapsed for updating screen is: {} ms", timer.elapsed().as_millis());

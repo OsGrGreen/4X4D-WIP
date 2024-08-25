@@ -21,8 +21,9 @@ implement_vertex!(Vertex_Simple, position);
 pub struct Vertex {
     pub position: [f32; 3],
     pub normal: [f32; 3],
+    pub tex_coords: [f32; 2], 
 }
-implement_vertex!(Vertex, position,normal);
+implement_vertex!(Vertex, position,normal,tex_coords);
 
 pub struct Renderer
     {
@@ -110,14 +111,16 @@ pub fn calculate_perspective(dim: (f32, f32)) -> Mat4{
     return Mat4::from_cols_array_2d(&perspective)
 }
 
-pub fn point_to_Vertex(p: Point) -> Vertex{
-    return Vertex{position: [p.x, p.y, 0.0], normal: [0.0,0.0,0.0]}
+pub fn point_to_Vertex(p: Point, uv: (f32,f32)) -> Vertex{
+    return Vertex{position: [p.x, p.y, 0.0], normal: [0.0,0.0,0.0], tex_coords: [uv.0, uv.1]}
 }
+
+const UV_HEX: [(f32,f32);6] =  [(1.0,0.366),(0.866,0.866),(0.366,1.0),(0.0,0.634),(0.134,0.134),(0.634,0.0)];
 
 pub fn array_to_VBO(points: Vec<Point>) -> Vec<Vertex>{
     let mut output: Vec<Vertex> = vec![];
-    for p in points{
-        output.push(point_to_Vertex(p));
+    for (i,p) in points.into_iter().enumerate(){
+        output.push(point_to_Vertex(p, UV_HEX[i]));
     }
     return output
 }

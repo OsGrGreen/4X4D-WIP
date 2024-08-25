@@ -1,7 +1,14 @@
 #version 330 core
-out vec4 color;
+
 in vec3 colPos; 
+in vec2 v_tex_coords;
+
+//uniform sampler2D tex;
+
+
+out vec4 color;
 
 void main() {
+    //texture(tex,v_tex_coords)*
     color = vec4(colPos, 1.0);
 }

@@ -1,26 +1,31 @@
 #[macro_use]
 extern crate glium;
 extern crate winit;
+use improvements::{building::Building, city::City, resource::{Resource, Resource_Counter}};
 use rand::{distr::{Distribution, Uniform}, Rng};
 use glam::{Mat4, Vec2, Vec3, Vec4, Vec4Swizzles};
 use util::{input_handler::{self, InputHandler}, ray_library::{ndc_to_intersection, ray_plane_intersect}, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
-use glium::{backend::Facade, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
+use glium::{backend::{glutin, Facade}, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
 use world::{draw_functions::{self, cantor_2}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, EVEN, ODD, SQRT3}, offset_coords::{self, qoffset_from_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
 use std::{alloc::Layout, io::stdout, mem::{self, size_of}, time::{Duration, Instant}};
 use glium::PolygonMode::Line;
+
+
 mod rendering;
 use rendering::{render::{array_to_VBO, Vertex_Simple}, render_camera::{self, RenderCamera}};
 
-mod util;
 
+mod improvements;
+mod util;
+mod player;
 mod world;
 
 
 #[derive(Copy, Clone, Debug)]
 struct Attr {
     world_position: [f32; 3],
-    colour: [f32; 3] // Changed to array
+    colour: [f32; 3], // Changed to array
 }
 implement_vertex!(Attr, world_position, colour);
 
@@ -36,12 +41,15 @@ fn pointy_hex_corner(center: Point, size: usize, i: i32) -> Point {
 
 fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
     let event_loop = winit::event_loop::EventLoopBuilder::new().build().expect("event loop building"); 
+
     event_loop.set_control_flow(ControlFlow::Poll);
     let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new().with_title("4X4D-WIP").build(&event_loop);
+    
     (event_loop, window, display)
 }
 
 fn main() {
+
     //First value is what row, second value is what column
     // 0,0 is bottom left corner
     let mut world_vec: Vec<Vec<Tile>> = vec![vec![]];
@@ -57,23 +65,14 @@ fn main() {
     }
 
 
-    //println!("world vec is now {:#?}", world_vec);
     println!("world vec length is {:#?} x {:#?}", world_vec.len(), world_vec[0].len());
-
-    //let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,0.5), Vec3::new(0.0,0.0,0.0));
     world_vec[12][25].set_biome(6);
-    world_vec[26][13].set_biome(6);
+    world_vec[13][25].improve();
+    world_vec[12][26].improve();
 
     // Closest camera can be: z = 2.15
     // Furtherst camera can be: z = 4.85
 
-    /*
-    
-    y = 4.5 =; NDC = 0.095 width 0.05 height; PXS = 38 width 34 height
-    y = 2.15 =;  NDC = 0.52 width 0.8 height; PXS = 664 width 576 height
-    y = 4.84 =; NDC = 0.0275 width 0.04 height; PXS = 34 width 28 height
-
-     */
     let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,4.5), Vec3::new(0.0,0.0,0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0,0.0,-1.0));
 
     //Camera constants
@@ -130,7 +129,7 @@ fn main() {
 
     let hex_vert_2 = array_to_VBO(corners);
     
-    //println!("hexvert is {:#?}", hex_vert_2);
+    println!("verts for hex is {:#?}", hex_vert_2);
     //println!("hexvert is {:#?}", hex_vert_2.len());
 
     let hex_indecies_fan: [u16; 9] = [ 
@@ -142,6 +141,21 @@ fn main() {
     let vert_shad_2 = util::read_shader("./shaders/vert2.4s");
     let frag_shad_1 = util::read_shader("./shaders/frag1.4s");
     let frag_shad_2 = util::read_shader("./shaders/frag2.4s");
+
+
+
+
+
+
+    //Read textures
+
+    let image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\hexTex.png")),
+                        image::ImageFormat::Png).unwrap().to_rgba8();
+    let image_dimensions = image.dimensions();
+    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+    let texture = glium::texture::Texture2d::new(&display, image).unwrap();
+
+    //Setup renderprograms
     //println!("{:#?}", &hex_vert_2);
     let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display).unwrap();
     let trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display).unwrap();
@@ -363,7 +377,8 @@ fn main() {
     
                     //world_vec[(clicked_x) as usize][(clicked_y-2) as usize].set_biome(6);
                     //world_vec[(clicked_x) as usize][(clicked_y+2) as usize].set_biome(6);
-                    world_vec[(clicked_x) as usize][(clicked_y) as usize].set_biome(7);
+                    let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
+                    world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
 
                 }
@@ -435,6 +450,8 @@ fn main() {
                 target.draw(
                     (&hex_renderer.vbo, per_instance.per_instance().unwrap()),
                     &hex_renderer.indicies,
+                    // For different hexes make a texture atlas so a specific tile has a texture in the atlas
+                    // Then each instance have different UV coords! 
                     &hex_renderer.program,
                     &uniform! { model: hex_size_mat, projection: perspective.to_cols_array_2d(), view:camera_matrix.to_cols_array_2d()},
                     &glium::DrawParameters {

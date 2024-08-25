@@ -40,8 +40,8 @@ pub fn read_model(file_path: &str) -> Vec<Vertex>{
                         
                         vertex_data.push(Vertex{
                             position:position,
-                            normal: normal.unwrap_or([0.0,0.0,0.0]),
-                            //texture,
+                            normal: _normal,
+                            tex_coords: _texture,
                         })
                     }
                 },

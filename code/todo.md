@@ -26,11 +26,42 @@ I think this should minimize the amount of memory needed.
 
 - [x] Make bigger movement with camera by jumping "back" to center when camera has moved a whole tile.
 
+
+## TODO 
+
+- [ ] Create texture atlas for hex textures
+- [ ] Make each hex able to have a texture (from the atlas)
+- [ ] Make Draw functions
+    - [ ] Draw Square
+    - [ ] Draw text
+    - [ ] Draw texture
+- [ ] Add units
+    - [ ] Have some clever way to know when to render units
+    - [ ] Make code for automatically adding units to be rendered
+    - [ ] Add unit logic
+        - [ ] Selection
+        - [ ] Movement (and range)
+        - [ ] Attacking
+        - [ ] Knowing which units are beside you
+    - [ ] Add creation of units (player input)
+- [ ] 
+- [ ] Make logic for building cities and buildings in cities
+- [ ] Make player able to have land
+- [ ] Make menus and stuff
+- [ ] Make loading screens maybe?
+- [ ] Move out constants (like texture atlas and so on) into seperate files for easy modification...
+ 
+
+
+
+
+
+
 ## TODO next
 
 ### Main goals
 
-- [ ] Create line outlines for each hex, to make each hex pop out more.
+- [x] Create line outlines for each hex, to make each hex pop out more.
 - [ ] Create "random" terrain generation see
     - https://gamedev.stackexchange.com/questions/16541/random-map-generation-strategies-for-scattering-clustering-random-nodes
     - https://www.youtube.com/watch?v=-H01z7cdOW0
@@ -40,4 +71,4 @@ I think this should minimize the amount of memory needed.
     - https://www.youtube.com/watch?v=j-rCuN7uMR8&list=PLbghT7MmckI7JHf0pdEQ8fbPb-LoDXEno
 - [ ] Make all random constants now actually be grounded in real numbers...
     - Like the width of the screen or how many hexes should be generated and so on.
-- [ ] Disable V-sync?
+- [ ] Disable V-sync? Dont know how to do that
