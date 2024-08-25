@@ -7,7 +7,7 @@ use glam::{Mat4, Vec2, Vec3, Vec4, Vec4Swizzles};
 use util::{input_handler::{self, InputHandler}, ray_library::{ndc_to_intersection, ray_plane_intersect}, read_model};
 use winit::{event_loop::{self, ControlFlow, EventLoop}, keyboard, window::{self, Fullscreen, Window}};
 use glium::{backend::{glutin, Facade}, glutin::{api::egl::{device, display}, surface::WindowSurface}, implement_vertex, Display, Surface};
-use world::{draw_functions::{self, cantor_2}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, EVEN, ODD, SQRT3}, offset_coords::{self, qoffset_from_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
+use world::{draw_functions::{self, cantor_2, BIOME_TO_TEXTURE}, hex::{FractionalHex, Hex}, layout::{self, Hex_Layout, Point, EVEN, ODD, SQRT3}, offset_coords::{self, qoffset_from_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
 use std::{alloc::Layout, io::stdout, mem::{self, size_of}, time::{Duration, Instant}};
 use glium::PolygonMode::Line;
 
@@ -26,8 +26,9 @@ mod world;
 struct Attr {
     world_position: [f32; 3],
     colour: [f32; 3], // Changed to array
+    tex_offsets: [f32;3], //x offset, y offset, scaling factor          For reading in texture atlas
 }
-implement_vertex!(Attr, world_position, colour);
+implement_vertex!(Attr, world_position, colour, tex_offsets);
 
 
 fn pointy_hex_corner(center: Point, size: usize, i: i32) -> Point {
@@ -132,8 +133,8 @@ fn main() {
     println!("verts for hex is {:#?}", hex_vert_2);
     //println!("hexvert is {:#?}", hex_vert_2.len());
 
-    let hex_indecies_fan: [u16; 9] = [ 
-        6, 0, 1, 2, 3, 4 , 5, 0, 6
+    let hex_indecies_fan: [u16; 7] = [ 
+        0, 1, 2, 3, 4 , 5, 0
         ];
 
     let cup_verts = util::read_model("./models/hex.obj");
@@ -143,17 +144,13 @@ fn main() {
     let frag_shad_2 = util::read_shader("./shaders/frag2.4s");
 
 
-
-
-
-
     //Read textures
-
-    let image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\hexTex.png")),
+    let image_timer = Instant::now();
+    let tile_texture_atlas_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\texture_atlas_tiles.png")),
                         image::ImageFormat::Png).unwrap().to_rgba8();
-    let image_dimensions = image.dimensions();
-    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-    let texture = glium::texture::Texture2d::new(&display, image).unwrap();
+    let image_dimensions = tile_texture_atlas_image.dimensions();
+    let tile_texture_atlas_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&tile_texture_atlas_image.into_raw(), image_dimensions);
+    let tile_texture_atlas = glium::texture::Texture2d::new(&display, tile_texture_atlas_image).unwrap();
 
     //Setup renderprograms
     //println!("{:#?}", &hex_vert_2);
@@ -219,6 +216,7 @@ fn main() {
             let val = Attr {
                 world_position: [coords.x, coords.y, 0.0],
                 colour: [color/2.0,color, 0.0],
+                tex_offsets: [0.0,0.0,1.0],
             };
             amount_of_hexes += 1;
             data.push(val);
@@ -307,7 +305,9 @@ fn main() {
             //println!("Camera is: {}", camera.get_pos());
             //Gör så kameran bara uppdateras när man faktiskt rör på sig...
             if traveresed_whole_hex{
+                let update_hex_map_timer = Instant::now();
                 draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
             }
             let intersect = ndc_to_intersection(&mouse_ndc,&camera_matrix,camera.get_pos(),&perspective);
             mouse_pos.x = intersect.x as f32;
@@ -379,8 +379,9 @@ fn main() {
                     //world_vec[(clicked_x) as usize][(clicked_y+2) as usize].set_biome(6);
                     let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
                     world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
+                    //Make seperate function that only updates the clicked tile when doing this...
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
-
+                    println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
                 }
             }
 
@@ -439,13 +440,6 @@ fn main() {
 
                 let mut target = display.draw();
 
-                let obj_size = [
-                    [0.01, 0.0, 0.0, 0.0],
-                    [0.0, 0.01, 0.0, 0.0],
-                    [0.0, 0.0, 0.01, 0.0],
-                    [0.0, 0.0, 2.0, 1.0f32]
-                ];
-
                 target.clear_color_and_depth((0.1, 0.4, 0.2, 1.0), 1.0);
                 target.draw(
                     (&hex_renderer.vbo, per_instance.per_instance().unwrap()),
@@ -453,7 +447,7 @@ fn main() {
                     // For different hexes make a texture atlas so a specific tile has a texture in the atlas
                     // Then each instance have different UV coords! 
                     &hex_renderer.program,
-                    &uniform! { model: hex_size_mat, projection: perspective.to_cols_array_2d(), view:camera_matrix.to_cols_array_2d()},
+                    &uniform! { model: hex_size_mat, projection: perspective.to_cols_array_2d(), view:camera_matrix.to_cols_array_2d(), tex: &tile_texture_atlas},
                     &glium::DrawParameters {
                         depth: glium::Depth {
                             test: glium::DepthTest::IfLess,
@@ -468,10 +462,10 @@ fn main() {
                 ).unwrap();
                 //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera_matrix.to_cols_array_2d(), u_light:light}));
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
-
+                //println!("\t\tUploading info to GPU took: {} ms", dur2.elapsed().as_millis());
 
                 target.finish().unwrap();
-                //println!("Time for drawing frame: {} ms", dur2.elapsed().as_millis());
+                //println!("\t\tTime for drawing frame: {} ms", dur2.elapsed().as_millis());
             },
             _ => (),
             },

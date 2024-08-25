@@ -3,12 +3,11 @@
 in vec3 colPos; 
 in vec2 v_tex_coords;
 
-//uniform sampler2D tex;
+uniform sampler2D tex;
 
 
 out vec4 color;
 
 void main() {
-    //texture(tex,v_tex_coords)*
-    color = vec4(colPos, 1.0);
+    color = texture(tex,v_tex_coords)*vec4(colPos, 1.0);
 }

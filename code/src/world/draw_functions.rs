@@ -27,6 +27,28 @@ pub fn reverse_cantor_3(k:f64) -> (f64, f64, f64){
     return (a,b,c)
 }
 
+// Void, 0
+// Water, 1
+// Woods, 2
+// Plains, 3
+// Mountain, 4
+// Hills, 5
+// Fog of War, 6
+// Debug, 7
+
+//Hardcoded for now..
+
+pub const BIOME_TO_TEXTURE: [[f32;3];8] = [
+    [0.25,0.75,0.25], // 0 Void
+    [0.25,0.50,0.25], //1 water
+    [0.0,0.75,0.25], // 2 Woods
+    [0.75,0.75,0.25], // 3 Plains
+    [0.25,0.75,0.25], // 4 Mountain
+    [0.0,0.50,0.25], // 5 Hills
+    [0.25,0.50,0.25], // 6 Fog of war
+    [0.50,0.75,0.25]]; // 7 debug
+
+ 
 
 //Make this slightly more efficient...
 pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tiles: &Vec<Vec<Tile>>, start_tile: (isize,isize), size_screen: (i32,i32)) {
@@ -79,6 +101,7 @@ pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tile
         mapping.set(i,Attr {
             world_position: hex.world_position,
             colour: final_colour,
+            tex_offsets: BIOME_TO_TEXTURE[current_tile.get_biome() as usize],
         });
     }
     //println!("Time elapsed for updating screen is: {} ms", timer.elapsed().as_millis());

@@ -29,10 +29,11 @@ I think this should minimize the amount of memory needed.
 
 ## TODO 
 
-- [ ] Create texture atlas for hex textures
-- [ ] Make each hex able to have a texture (from the atlas)
+- [x] Create texture atlas for hex textures
+- [x] Make each hex able to have a texture (from the atlas)
 - [ ] Make Draw functions
     - [ ] Draw Square
+    - [ ] Draw line
     - [ ] Draw text
     - [ ] Draw texture
 - [ ] Add units
@@ -44,7 +45,6 @@ I think this should minimize the amount of memory needed.
         - [ ] Attacking
         - [ ] Knowing which units are beside you
     - [ ] Add creation of units (player input)
-- [ ] 
 - [ ] Make logic for building cities and buildings in cities
 - [ ] Make player able to have land
 - [ ] Make menus and stuff
