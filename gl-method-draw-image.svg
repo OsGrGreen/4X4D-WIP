@@ -1,0 +1,130 @@
+<svg width="512" height="800" xmlns="http://www.w3.org/2000/svg">
+ <g>
+  <title>Layer 1</title>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_3" y="113.5" x="25.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v0</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_4" y="112.5" x="99.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v2</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_5" y="112.5" x="166.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v4</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_6" y="171.5" x="63.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v1</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_7" y="170.5" x="137.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v3</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_8" y="170.5" x="204.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v6</text>
+  <ellipse ry="4.5" rx="5" id="svg_9" cy="126" cx="41.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5" id="svg_10" cy="149" cx="74.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5.5" id="svg_11" cy="125" cx="114" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="4" id="svg_12" cy="148.5" cx="146.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="5" id="svg_13" cy="122.5" cx="180.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="3.5" rx="4.5" id="svg_14" cy="151" cx="212" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_15" y="200.5" x="35.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">GL_POINTS</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_16" y="115.5" x="279.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v0</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_17" y="114.5" x="353.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v2</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_18" y="114.5" x="420.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v4</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_19" y="173.5" x="317.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v1</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_20" y="172.5" x="391.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v3</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_21" y="172.5" x="458.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v6</text>
+  <ellipse ry="4.5" rx="5" id="svg_22" cy="128" cx="295.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5" id="svg_23" cy="151" cx="328.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5.5" id="svg_24" cy="127" cx="368" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="4" id="svg_25" cy="150.5" cx="400.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="5" id="svg_26" cy="124.5" cx="434.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="3.5" rx="4.5" id="svg_27" cy="153" cx="466" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_28" y="203.5" x="302.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">GL_LINES</text>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_29" y2="150.5" x2="328.5" y1="130.5" x1="297.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_30" y2="150.5" x2="399.5" y1="127.5" x1="370.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_31" y2="153.5" x2="467.5" y1="126.5" x1="437.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_32" y="266.5" x="28.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v0</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_33" y="265.5" x="102.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v2</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_34" y="265.5" x="169.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v4</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_35" y="324.5" x="66.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v1</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_36" y="323.5" x="140.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v3</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_37" y="323.5" x="207.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v6</text>
+  <ellipse ry="4.5" rx="5" id="svg_38" cy="279" cx="44.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5" id="svg_39" cy="302" cx="77.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5.5" id="svg_40" cy="278" cx="117" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="4" id="svg_41" cy="301.5" cx="149.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="5" id="svg_42" cy="275.5" cx="183.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="3.5" rx="4.5" id="svg_43" cy="304" cx="215" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_44" y="354.5" x="39.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">GL_LINE_STRIP</text>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_45" y2="301.5" x2="77.5" y1="281.5" x1="46.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_46" y2="301.5" x2="148.5" y1="278.5" x1="119.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_47" y2="304.5" x2="216.5" y1="277.5" x1="186.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_48" y2="277.5" x2="116" y1="301.5" x1="78" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_49" y2="275.5" x2="182" y1="301.5" x1="151" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_50" y="388.5" x="114" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_51" y="263.5" x="285.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v0</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_52" y="262.5" x="359.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v2</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_53" y="262.5" x="426.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v4</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_54" y="321.5" x="323.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v1</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_55" y="320.5" x="397.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v3</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_56" y="320.5" x="464.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v6</text>
+  <ellipse ry="4.5" rx="5" id="svg_57" cy="276" cx="301.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5" id="svg_58" cy="299" cx="334.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5.5" id="svg_59" cy="275" cx="374" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="4" id="svg_60" cy="298.5" cx="406.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="5" id="svg_61" cy="272.5" cx="440.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="3.5" rx="4.5" id="svg_62" cy="301" cx="472" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_63" y="351.5" x="296.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">GL_LINE_LOOP</text>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_64" y2="298.5" x2="334.5" y1="278.5" x1="303.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_65" y2="298.5" x2="405.5" y1="275.5" x1="376.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_66" y2="301.5" x2="473.5" y1="274.5" x1="443.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_67" y2="274.5" x2="373" y1="298.5" x1="335" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_68" y2="272.5" x2="439" y1="298.5" x1="408" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_69" y2="276.5" x2="303" y1="300.5" x1="474" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_70" y="421.5" x="37.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v0</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_71" y="420.5" x="111.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v2</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_72" y="420.5" x="178.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v4</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_73" y="479.5" x="75.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v1</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_74" y="478.5" x="149.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v3</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_75" y="478.5" x="216.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v6</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_82" y="508.5" x="47.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">GL_TRIANGLES</text>
+  <path id="svg_85" d="m53,436.5l31,22.5l40,-26l-71,3.5z" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#e5e5e5"/>
+  <path id="svg_86" d="m160,455.5l33,-26.5l33,30l-66,-3.5z" opacity="undefined" stroke-dasharray="null" stroke-width="0" stroke="#0f0f00" fill="#e5e5e5"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_87" y="420.5" x="283.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v0</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_88" y="419.5" x="357.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v2</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_89" y="419.5" x="424.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v4</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_90" y="478.5" x="321.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v1</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_91" y="477.5" x="395.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v3</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_92" y="477.5" x="462.5" opacity="undefined" stroke-width="0" stroke="#000" fill="#000000">v6</text>
+  <ellipse ry="4.5" rx="5" id="svg_93" cy="433" cx="299.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="20" id="svg_99" y="507.5" x="285.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">GL_TRIANGLE_STRIP</text>
+  <path id="svg_100" d="m302,433.5l31,22.5l40,-26l-71,3.5z" opacity="undefined" stroke-dasharray="null" stroke-width="0" stroke="#f7f7f4" fill="#e5e5e5"/>
+  <path id="svg_101" d="m406,457.15l33,-29.15l33,33l-66,-3.85z" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" fill="#e5e5e5" stroke="#000"/>
+  <path id="svg_103" d="m336,455.5" opacity="NaN" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#e5e5e5"/>
+  <path id="svg_106" d="m333,457.5l41,-26.5l62,-2l-34,28l-69,0.5z" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="null" stroke="#000" fill="#e5e5e5"/>
+  <ellipse ry="4.5" rx="5" id="svg_76" cy="434" cx="53.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5" id="svg_77" cy="457" cx="86.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5.5" id="svg_78" cy="433" cx="126" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="4" id="svg_79" cy="456.5" cx="158.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="5" id="svg_80" cy="430.5" cx="192.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="3.5" rx="4.5" id="svg_81" cy="459" cx="224" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5" id="svg_94" cy="456" cx="332.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5.5" id="svg_95" cy="432" cx="372" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="4" id="svg_96" cy="455.5" cx="404.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="4" rx="5" id="svg_97" cy="429.5" cx="438.5" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <ellipse ry="3.5" rx="4.5" id="svg_98" cy="458" cx="470" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000"/>
+  <line fill="none" stroke="#000" stroke-dasharray="null" stroke-opacity="null" fill-opacity="null" opacity="undefined" x1="305" y1="432.5" x2="371" y2="430.5" id="svg_1" stroke-linejoin="null" stroke-linecap="null"/>
+  <line fill="none" stroke="#000" stroke-dasharray="null" stroke-opacity="null" fill-opacity="null" opacity="undefined" x1="467" y1="460.5" x2="406" y2="456.5" id="svg_2" stroke-linejoin="null" stroke-linecap="null"/>
+  <line fill="none" stroke="#000" stroke-dasharray="null" stroke-opacity="null" fill-opacity="null" opacity="undefined" x1="302" y1="434.5" x2="330" y2="453.5" id="svg_83" stroke-linejoin="null" stroke-linecap="null"/>
+  <line fill="none" stroke="#000" stroke-dasharray="null" stroke-opacity="null" fill-opacity="null" opacity="undefined" x1="376" y1="432.5" x2="403" y2="454.5" id="svg_84" stroke-linejoin="null" stroke-linecap="null"/>
+  <line fill="none" stroke="#000" stroke-dasharray="null" stroke-opacity="null" fill-opacity="null" opacity="undefined" x1="442" y1="429.5" x2="471" y2="458.5" id="svg_102" stroke-linejoin="null" stroke-linecap="null"/>
+  <path id="svg_105" d="m260,729.5l189,-110.5l-101,-69l-176,-3l-91,68l179,114.5z" opacity="undefined" stroke="#000" fill="#e5e5e5"/>
+  <ellipse ry="4" rx="5" id="svg_107" cy="732.5" cx="261" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="null" stroke="#000" fill="#000000"/>
+  <ellipse ry="6" rx="4" id="svg_108" cy="618.5" cx="452" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="null" stroke="#000" fill="#000000"/>
+  <ellipse ry="5" rx="5.5" id="svg_109" cy="551.5" cx="352.5" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="null" stroke="#000" fill="#000000"/>
+  <ellipse ry="4.5" rx="5" id="svg_110" cy="547" cx="174" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="null" stroke="#000" fill="#000000"/>
+  <ellipse ry="5" rx="5.5" id="svg_111" cy="614.5" cx="83.5" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="null" stroke="#000" fill="#000000"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_112" y="739.5" x="269" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">v1</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_113" y="626.5" x="460" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">v2</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_114" y="552.5" x="363" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">v3</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_115" y="549.5" x="140" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">v4</text>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_116" y="622.5" x="49" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">v5</text>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_117" y2="551.5" x2="352" y1="728.5" x1="263" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_118" y2="730.5" x2="261" y1="549.5" x1="176" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="null" stroke="#000" fill="none"/>
+  <text xml:space="preserve" text-anchor="start" font-family="sans-serif" font-size="24" id="svg_119" y="770.5" x="153" opacity="undefined" stroke-opacity="null" stroke-dasharray="null" stroke-width="0" stroke="#000" fill="#000000">GL_TRIANGLE_FAN</text>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_120" y2="457.5" x2="86" y1="437.5" x1="56" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_121" y2="458.5" x2="86" y1="433.5" x1="128" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_122" y2="433.5" x2="124" y1="435.5" x1="56" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_123" y2="431.5" x2="192" y1="456.5" x1="160" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_124" y2="430.5" x2="193" y1="457.5" x1="225" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+  <line stroke-linecap="null" stroke-linejoin="null" id="svg_125" y2="459.5" x2="223" y1="455.5" x1="161" opacity="undefined" fill-opacity="null" stroke-opacity="null" stroke-dasharray="null" stroke="#000" fill="none"/>
+ </g>
+
+</svg>
