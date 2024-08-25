@@ -1,5 +1,5 @@
 
-use crate::Attr;
+use crate::{rendering::render::Renderer, Attr};
 
 use super::{tile::Tile, NUM_COLMS, NUM_ROWS};
 
@@ -105,3 +105,4 @@ pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tile
     }
     //println!("Time elapsed for updating screen is: {} ms", timer.elapsed().as_millis());
 }
+

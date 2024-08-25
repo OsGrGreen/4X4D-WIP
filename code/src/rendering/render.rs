@@ -6,7 +6,7 @@ use winit::window::Window; */
 
 
 use glam::Mat4;
-use glium::{glutin::surface::WindowSurface, uniforms::{AsUniformValue, Uniforms, UniformsStorage}, Display, DrawParameters, Frame, Program, Surface};
+use glium::{glutin::surface::WindowSurface, uniforms::{AsUniformValue, Uniforms, UniformsStorage}, Display, DrawParameters, Frame, Program, Surface, VertexBuffer};
 
 use crate::world::layout::Point;
 
@@ -24,20 +24,25 @@ pub struct Vertex {
 }
 implement_vertex!(Vertex, position,normal,tex_coords);
 
-pub struct Renderer
+pub struct Renderer<'b>
     {
         // What to be rendered (Verts)
-        pub vbo: glium::vertex::VertexBufferAny,
+        // Make these be able to render any Vertex type again since saving normal and tex_coords for line is kina overkill...
+        pub vbo: VertexBuffer<Vertex>,
         // How to be rendered (Indicies) (Kan behöva öka från u16 till u32)
         pub indicies: glium::IndexBuffer<u16>,
         // The program to render it
         pub program: Program,
+        pub draw_params: DrawParameters<'b>,
+        pub is_dynamic: bool,
+        used_vbo: usize,
+        used_inds: usize,
         // Specific Uniforms (Känns kanske lite svårt att spara på ett bra sätt här?)
         // Texture
 }
 
-impl Renderer{
-        pub fn new<'a>(shape: Vec<Vertex>, inds: Vec<u16>, prim_type: Option<glium::index::PrimitiveType> ,vert_shader: &'a str, frag_shader: &'a str, geo_shader: Option<&'a str>, disp: &Display<WindowSurface>) -> Result<Renderer, &'a str>{
+impl <'b>Renderer<'b>{
+        pub fn new<'a>(shape: Vec<Vertex>, inds: Vec<u16>, prim_type: Option<glium::index::PrimitiveType> ,vert_shader: &'a str, frag_shader: &'a str, geo_shader: Option<&'a str>, disp: &Display<WindowSurface>, params: Option<DrawParameters<'b>>) -> Result<Renderer<'b>, &'a str>{
             let shape_len = shape.len();
 
             let vbo = glium::VertexBuffer::new(disp, &shape).unwrap();
@@ -60,6 +65,10 @@ impl Renderer{
                     vbo: vbo.into(),
                     indicies: indicies,
                     program: program,
+                    is_dynamic: false,
+                    draw_params: params.unwrap_or(Default::default()),
+                    used_vbo: 0,
+                    used_inds: 0,
                 })
             }else{
                 let indicies = glium::IndexBuffer::new(disp,prim_type.unwrap_or(glium::index::PrimitiveType::TrianglesList),
@@ -69,8 +78,75 @@ impl Renderer{
                     vbo: vbo.into(),
                     indicies: indicies,
                     program: program,
+                    is_dynamic: false,
+                    draw_params: params.unwrap_or(Default::default()),
+                    used_vbo: 0,
+                    used_inds: 0,
                 })
             }
+        }
+
+        pub fn new_dynamic<'a>(shape: Vec<Vertex>, inds: Vec<u16>, prim_type: Option<glium::index::PrimitiveType> ,vert_shader: &'a str, frag_shader: &'a str, geo_shader: Option<&'a str>, disp: &Display<WindowSurface>, params: Option<DrawParameters<'b>>) -> Result<Renderer<'b>, &'a str>{
+            let shape_len = shape.len();
+
+            let vbo = glium::VertexBuffer::dynamic(disp, &shape).unwrap();
+
+            let program = glium::Program::from_source(disp, vert_shader, frag_shader, geo_shader).unwrap();
+
+            if inds.len() < 1{
+                //println!("Found no indecies");
+                let mut inds = vec![];
+                for n in (0..shape_len).step_by(3){
+                    //println!("Pushing: {}, {}, {}", n, (n+1)%shape_len,(n+2)%shape_len);
+                    inds.push(n as u16);
+                    inds.push(((n+1)%shape_len) as u16);
+                    inds.push(((n+2)%shape_len) as u16);
+                }
+                let indicies = glium::IndexBuffer::dynamic(disp,prim_type.unwrap_or(glium::index::PrimitiveType::TrianglesList),
+                &inds).unwrap();
+
+                Ok(Renderer{
+                    vbo: vbo.into(),
+                    indicies: indicies,
+                    program: program,
+                    is_dynamic: true,
+                    draw_params: params.unwrap_or(Default::default()),
+                    used_vbo: 0,
+                    used_inds: 0,
+                })
+            }else{
+                let indicies = glium::IndexBuffer::dynamic(disp,prim_type.unwrap_or(glium::index::PrimitiveType::TrianglesList),
+                &inds).unwrap();
+
+                Ok(Renderer{
+                    vbo: vbo.into(),
+                    indicies: indicies,
+                    program: program,
+                    is_dynamic: true,
+                    draw_params: params.unwrap_or(Default::default()),
+                    used_vbo: 0,
+                    used_inds: 0,
+                })
+            }
+        }
+
+        pub fn new_empty_dynamic<'a>(max_elements: usize, prim_type: Option<glium::index::PrimitiveType> ,vert_shader: &'a str, frag_shader: &'a str, geo_shader: Option<&'a str>, disp: &Display<WindowSurface>, params: Option<DrawParameters<'b>>) -> Result<Renderer<'b>, &'a str>{
+
+            let vbo:VertexBuffer<Vertex> = glium::VertexBuffer::empty_dynamic(disp, max_elements).unwrap();
+
+            let program = glium::Program::from_source(disp, vert_shader, frag_shader, geo_shader).unwrap();
+
+            let indicies = glium::IndexBuffer::empty_dynamic(disp, prim_type.unwrap_or(glium::index::PrimitiveType::TrianglesList), max_elements*3).unwrap();
+
+            Ok(Renderer{
+                    vbo: vbo.into(),
+                    indicies: indicies,
+                    program: program,
+                    is_dynamic: true,
+                    draw_params: params.unwrap_or(Default::default()),
+                    used_vbo: 0,
+                    used_inds: 0,
+            })
         }
 
         pub fn draw<T, R>(&self, frame: &mut Frame, draw_parameters: Option<&DrawParameters>, uniforms: Option<&UniformsStorage<T, R>>)
@@ -86,6 +162,34 @@ impl Renderer{
                     draw_parameters.unwrap_or(&Default::default())).unwrap();
             }
                 
+        }
+
+        pub fn add_part_vao(&mut self, new_vertices: Vec<Vertex>, new_indicies: Vec<u16>){
+
+            //Only allow vao to be modified if VAO is dynamic
+        
+            if self.is_dynamic{
+
+                // Can probably be done in a nicer way but works for now
+
+                let end_new_vbo = new_vertices.len()+self.used_vbo;
+                let end_new_indicies = new_indicies.len()+self.used_inds;
+                if end_new_vbo > self.vbo.len() || end_new_indicies > self.indicies.len(){
+                    return;
+                }
+                let update_slice_vbo = self.vbo.slice_mut(self.used_vbo..end_new_vbo).unwrap();
+                update_slice_vbo.write(&new_vertices);
+                let update_slice_indicies = self.indicies.slice_mut(self.used_inds..end_new_indicies).unwrap();
+                let mut fixed_inds = vec![];
+                for inds in new_indicies{
+                    fixed_inds.push(inds+self.used_vbo as u16);
+                }
+                update_slice_indicies.write(&fixed_inds);
+                self.used_vbo = end_new_vbo;
+                self.used_inds = end_new_indicies;
+            }else{
+                return
+            }
         }
 }  
 
@@ -110,16 +214,25 @@ pub fn calculate_perspective(dim: (f32, f32)) -> Mat4{
     return Mat4::from_cols_array_2d(&perspective)
 }
 
-pub fn point_to_Vertex(p: Point, uv: (f32,f32)) -> Vertex{
+pub fn point_to_vertex(p: Point, uv: (f32,f32)) -> Vertex{
     return Vertex{position: [p.x, p.y, 0.0], normal: [0.0,0.0,0.0], tex_coords: [uv.0, uv.1]}
 }
 
 const UV_HEX: [(f32,f32);6] =  [(1.0,0.366),(0.866,0.866),(0.366,1.0),(0.0,0.634),(0.134,0.134),(0.634,0.0)];
 
-pub fn array_to_VBO(points: Vec<Point>) -> Vec<Vertex>{
+pub fn array_to_vbo(points: Vec<Point>) -> Vec<Vertex>{
     let mut output: Vec<Vertex> = vec![];
     for (i,p) in points.into_iter().enumerate(){
-        output.push(point_to_Vertex(p, UV_HEX[i]));
+        output.push(point_to_vertex(p, UV_HEX[i]));
     }
     return output
+}
+
+pub fn draw_line(start_ndc: (f32,f32), end_ndc: (f32,f32), line_renderer:&mut Renderer){
+    
+    let new_vertices: Vec<Vertex> = vec![Vertex{position: [start_ndc.0, start_ndc.1, 0.0], normal: [0.0,0.0,1.0], tex_coords: [0.0, 0.0]}, Vertex{position: [end_ndc.0, end_ndc.1, 0.0], normal: [0.0,0.0,0.1], tex_coords: [0.0, 0.0]}];
+    let new_indicies = vec![0, 1];
+
+    line_renderer.add_part_vao(new_vertices, new_indicies);
+
 }

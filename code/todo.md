@@ -34,7 +34,7 @@ I think this should minimize the amount of memory needed.
 - [ ] Remove RUSTc  warnings
 - [ ] Make Draw functions
     - [ ] Draw Square
-    - [ ] Draw line
+    - [x] Draw line
     - [ ] Draw text
     - [ ] Draw texture
 - [ ] Make program use multiple threads

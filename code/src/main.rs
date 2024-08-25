@@ -11,7 +11,7 @@ use std::time::{Instant};
 
 
 mod rendering;
-use rendering::{render::array_to_vbo, render_camera::RenderCamera};
+use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera};
 
 
 mod improvements;
@@ -131,11 +131,25 @@ fn main() {
         ];
 
     let cup_verts = util::read_model("./models/hex.obj");
-    let vert_shad = util::read_shader("./shaders/vert1.4s");
-    let vert_shad_2 = util::read_shader("./shaders/vert2.4s");
-    let frag_shad_1 = util::read_shader("./shaders/frag1.4s");
-    let frag_shad_2 = util::read_shader("./shaders/frag2.4s");
+    let vert_shad = util::read_shader("./shaders/vert1.glsl");
+    let vert_shad_2 = util::read_shader("./shaders/vert2.glsl");
+    let frag_shad_1 = util::read_shader("./shaders/frag1.glsl");
+    let frag_shad_2 = util::read_shader("./shaders/frag2.glsl");
+    let line_vert_shader = util::read_shader("./shaders/line_vert.glsl");
+    let line_frag_shader = util::read_shader("./shaders/line_frag.glsl");
 
+    // Setup specific parameters
+
+    let line_params = glium::DrawParameters {
+        depth: glium::Depth {
+            test: glium::DepthTest::IfLess,
+            write: true,
+            .. Default::default()
+        },
+      polygon_mode: glium::draw_parameters::PolygonMode::Line,
+      line_width: Some(5.0),
+        .. Default::default()
+    };
 
     //Read textures
     let tile_texture_atlas_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\texture_atlas_tiles.png")),
@@ -144,11 +158,19 @@ fn main() {
     let tile_texture_atlas_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&tile_texture_atlas_image.into_raw(), image_dimensions);
     let tile_texture_atlas = glium::texture::Texture2d::new(&display, tile_texture_atlas_image).unwrap();
 
-    //Setup renderprograms
-    //println!("{:#?}", &hex_vert_2);
-    let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display).unwrap();
-    let _trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display).unwrap();
-    
+    //Setup render programs
+    let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display, None).unwrap();
+    let _trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display, None).unwrap();
+    let mut line_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::LinesList), &line_vert_shader, &line_frag_shader, None, &display, Some(line_params)).unwrap();
+
+    // Add some lines to the line renderer
+
+    let new_vertices: Vec<Vertex> = vec![Vertex{position: [-1.0, -1.0, 0.0], normal: [0.0,0.0,0.0], tex_coords: [0.0, 0.0]}, Vertex{position: [1.0, 1.0, 0.0], normal: [0.0,0.0,0.0], tex_coords: [0.0, 0.0]}];
+    let new_indicies = vec![0, 1];
+    line_renderer.add_part_vao(new_vertices, new_indicies);
+
+    // Uniform setup
+
     let _light = [-1.0, 0.4, 0.9f32];
 
     let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
@@ -334,6 +356,8 @@ fn main() {
                     world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
                     println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
+
+                    render::draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y),&mut line_renderer);
                 }
             }
 
@@ -412,12 +436,13 @@ fn main() {
                         .. Default::default()
                     },
                 ).unwrap();
+                target.draw(&line_renderer.vbo, &line_renderer.indicies, &line_renderer.program, &uniform! {}, &line_renderer.draw_params).unwrap();
                 //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera_matrix.to_cols_array_2d(), u_light:light}));
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
                 //println!("\t\tUploading info to GPU took: {} ms", dur2.elapsed().as_millis());
 
                 target.finish().unwrap();
-                //println!("\t\tTime for drawing frame: {} ms", dur2.elapsed().as_millis());
+                //println!("\t\tTime for drawing frame: {} ms\n", dur2.elapsed().as_millis());
             },
             _ => (),
             },
