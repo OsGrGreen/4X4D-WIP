@@ -6,7 +6,7 @@ pub struct Tile{
                      // Like who owns the tile, if it has building or city and so on...
 }
 
-const biome_to_colour: [[f32;3];8] = [
+const BIOME_TO_COLOUR: [[f32;3];8] = [
     [0.0,0.0,0.0], // Void, 0
     [0.0,0.3,1.0], // Water, 1
     [0.3,1.0,0.0], // Woods, 2
@@ -30,7 +30,7 @@ impl Tile{
     }
 
     pub fn get_biome_colour(&self) -> [f32;3]{
-        return biome_to_colour[(self.information >> 5 & 7) as usize]
+        return BIOME_TO_COLOUR[(self.information >> 5 & 7) as usize]
     }
 
     pub fn get_improved(&self) -> u8{

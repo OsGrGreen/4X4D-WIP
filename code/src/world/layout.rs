@@ -1,4 +1,3 @@
-use glam::Vec2;
 
 use super::hex::{FractionalHex, Hex};
 
@@ -24,9 +23,9 @@ pub const SQRT3:f32 = 1.7320508;
 pub const EVEN:i32 = 1;
 pub const ODD:i32 = -1;
 
-const layout_pointy: Orientation = Orientation::new(SQRT3,SQRT3/2.0,0.0,3.0/2.0,SQRT3/3.0,-1.0/3.0,0.0,2.0/3.0,0.5);
+const LAYOUT_POINTY: Orientation = Orientation::new(SQRT3,SQRT3/2.0,0.0,3.0/2.0,SQRT3/3.0,-1.0/3.0,0.0,2.0/3.0,0.5);
 
-const layout_flat: Orientation = Orientation::new(3.0 / 2.0, 0.0, SQRT3 / 2.0, SQRT3,2.0 / 3.0, 0.0, -1.0 / 3.0, SQRT3 / 3.0, 0.0);
+const LAYOUT_FLAT: Orientation = Orientation::new(3.0 / 2.0, 0.0, SQRT3 / 2.0, SQRT3,2.0 / 3.0, 0.0, -1.0 / 3.0, SQRT3 / 3.0, 0.0);
 
 #[derive(Copy, Clone,Debug)]
 pub struct Point {
@@ -52,11 +51,11 @@ impl HexLayout {
     }
 
     pub fn new_flat(size:Point,origin:Point) -> HexLayout{
-        HexLayout { orientation: layout_flat, size: size, origin: origin,is_flat:true}
+        HexLayout { orientation: LAYOUT_FLAT, size: size, origin: origin,is_flat:true}
     }
 
     pub fn new_pointy(size:Point,origin:Point) -> HexLayout{
-        HexLayout { orientation: layout_pointy, size: size, origin: origin, is_flat:false}
+        HexLayout { orientation: LAYOUT_POINTY, size: size, origin: origin, is_flat:false}
     }
 
     pub fn get_height(&self) -> f32{

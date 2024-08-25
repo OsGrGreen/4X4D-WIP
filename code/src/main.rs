@@ -1,19 +1,17 @@
 #[macro_use]
 extern crate glium;
 extern crate winit;
-use improvements::{building::Building, city::City, resource::{Resource, ResourceCounter}};
 use rand::distr::{Distribution, Uniform};
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Vec3};
 use util::{input_handler::InputHandler, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
 use glium::{glutin::surface::WindowSurface, implement_vertex, Display, Surface};
 use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
 use std::time::{Instant};
-use glium::PolygonMode::Line;
 
 
 mod rendering;
-use rendering::{render::array_to_VBO, render_camera::RenderCamera};
+use rendering::{render::array_to_vbo, render_camera::RenderCamera};
 
 
 mod improvements;
@@ -123,7 +121,7 @@ fn main() {
     let mut world_camera = WorldCamera::new((NUM_ROWS, NUM_COLMS));
 
 
-    let hex_vert_2 = array_to_VBO(corners);
+    let hex_vert_2 = array_to_vbo(corners);
     
     println!("verts for hex is {:#?}", hex_vert_2);
     //println!("hexvert is {:#?}", hex_vert_2.len());

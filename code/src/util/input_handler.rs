@@ -1,7 +1,7 @@
 use std::collections::{hash_set::Iter, HashSet};
 
 use glam::Vec2;
-use winit::{event::{DeviceId, KeyEvent}, keyboard::{self, KeyCode, PhysicalKey}, platform::scancode::PhysicalKeyExtScancode};
+use winit::{event::{KeyEvent}, keyboard::{self, PhysicalKey}};
 
 pub struct InputHandler{
     movement: Vec2,
