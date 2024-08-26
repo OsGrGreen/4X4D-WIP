@@ -5,13 +5,13 @@ use rand::distr::{Distribution, Uniform};
 use glam::{Vec3};
 use util::{input_handler::InputHandler, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
-use glium::{glutin::surface::WindowSurface, implement_vertex, Display, Surface};
+use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface};
 use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
 use std::time::{Instant};
 
 
 mod rendering;
-use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera};
+use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera, text::RenderedText};
 
 
 mod improvements;
@@ -48,6 +48,7 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
 }
 
 fn main() {
+
 
     //First value is what row, second value is what column
     // 0,0 is bottom left corner
@@ -151,25 +152,52 @@ fn main() {
         .. Default::default()
     };
 
+    let text_params = glium::DrawParameters {
+        blend: glium::Blend::alpha_blending(),
+        .. Default::default()
+    };
+
     //Read textures
     let tile_texture_atlas_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\texture_atlas_tiles.png")),
                         image::ImageFormat::Png).unwrap().to_rgba8();
     let image_dimensions = tile_texture_atlas_image.dimensions();
     let tile_texture_atlas_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&tile_texture_atlas_image.into_raw(), image_dimensions);
     let tile_texture_atlas = glium::texture::Texture2d::new(&display, tile_texture_atlas_image).unwrap();
+    
 
+    // Font chars are 12 x 6
+    let font_raw_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\standard_font.png")),
+    image::ImageFormat::Png).unwrap().to_rgba8();
+    let font_dimensions = font_raw_image.dimensions();
+    let font_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&font_raw_image.into_raw(), font_dimensions);
+    let font_atlas = glium::texture::Texture2d::new(&display, font_image).unwrap();
+
+    println!("Internal format of font_atlas is {:#?}", font_atlas.get_texture_type());
     //Setup render programs
     let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display, None).unwrap();
     let _trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display, None).unwrap();
     let mut line_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::LinesList), &line_vert_shader, &line_frag_shader, None, &display, Some(line_params)).unwrap();
+    let mut ui_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, None).unwrap();
+    let mut text_renderer = rendering::render::Renderer::new_empty_dynamic(256, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, Some(text_params)).unwrap();
+   
+    
+    let mut hello_world_text = RenderedText::new("Hello\nWorld!");
 
-    // Add some lines to the line renderer
+    text_renderer.render_text((-0.5,0.0), 0.1,Some([0.0,1.0,1.0]),&mut hello_world_text);
+    
+    
+    // Add some stuff to the renderers
 
-    let new_vertices: Vec<Vertex> = vec![Vertex{position: [-1.0, -1.0, 0.0], normal: [0.0,0.0,0.0], tex_coords: [0.0, 0.0]}, Vertex{position: [1.0, 1.0, 0.0], normal: [0.0,0.0,0.0], tex_coords: [0.0, 0.0]}];
-    let new_indicies = vec![0, 1];
-    line_renderer.add_part_vao(new_vertices, new_indicies);
+    //ui_renderer.draw_rectangle_with_texture((0.0, 0.0), 0.2, 0.2, None, 0);
+
 
     // Uniform setup
+        // Text uniforms
+    let text_behavior = glium::uniforms::SamplerBehavior {
+        minify_filter: MinifySamplerFilter::Nearest,
+        magnify_filter: MagnifySamplerFilter::Nearest,
+        ..Default::default()
+    };
 
     let _light = [-1.0, 0.4, 0.9f32];
 
@@ -357,7 +385,7 @@ fn main() {
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
                     println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
 
-                    render::draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y),&mut line_renderer);
+                    line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
                 }
             }
 
@@ -437,6 +465,8 @@ fn main() {
                     },
                 ).unwrap();
                 target.draw(&line_renderer.vbo, &line_renderer.indicies, &line_renderer.program, &uniform! {}, &line_renderer.draw_params).unwrap();
+                target.draw(&ui_renderer.vbo, &ui_renderer.indicies, &ui_renderer.program, &uniform! {tex:&font_atlas}, &Default::default()).unwrap();
+                target.draw(&text_renderer.vbo, &text_renderer.indicies, &text_renderer.program, &uniform! {tex:glium::uniforms::Sampler(&font_atlas, text_behavior)}, &text_renderer.draw_params).unwrap();
                 //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera_matrix.to_cols_array_2d(), u_light:light}));
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
                 //println!("\t\tUploading info to GPU took: {} ms", dur2.elapsed().as_millis());

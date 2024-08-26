@@ -10,6 +10,8 @@ use glium::{glutin::surface::WindowSurface, uniforms::{AsUniformValue, Uniforms,
 
 use crate::world::layout::Point;
 
+use super::{char_font_pos::CHAR_TO_TEX, text::RenderedText};
+
 #[derive(Copy, Clone,Debug)]
 pub struct VertexSimple {
     pub position: [f32; 2],
@@ -191,7 +193,84 @@ impl <'b>Renderer<'b>{
                 return
             }
         }
+
+        pub fn draw_line(&mut self, start_ndc: (f32,f32), end_ndc: (f32,f32), color: Option<[f32;3]>){
+    
+            let new_vertices: Vec<Vertex> = vec![Vertex{position: [start_ndc.0, start_ndc.1, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: [0.0, 0.0]}, Vertex{position: [end_ndc.0, end_ndc.1, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: [0.0, 0.0]}];
+            let new_indicies = vec![0, 1];
+        
+            self.add_part_vao(new_vertices, new_indicies);
+        
+        }
+        
+        pub fn draw_rectangle(&mut self, start_ndc: (f32,f32), width:f32,height:f32, color: Option<[f32;3]>){
+        
+            let new_vertices: Vec<Vertex> = vec![
+                    Vertex{position: [start_ndc.0, start_ndc.1, 0.0], normal: color.unwrap_or([1.0,0.0,0.0]), tex_coords: [0.0, 0.0]}, 
+                    Vertex{position: [start_ndc.0+width, start_ndc.1, 0.0], normal: color.unwrap_or([0.0,1.0,0.0]), tex_coords: [0.0, 0.0]},
+                    Vertex{position: [start_ndc.0+width, start_ndc.1+height, 0.0], normal: color.unwrap_or([0.0,0.0,1.0]), tex_coords: [0.0, 0.0]},
+                    Vertex{position: [start_ndc.0, start_ndc.1+height, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: [0.0, 0.0]}];
+            let new_indicies = vec![0, 2, 1, 0, 2, 3];
+        
+            self.add_part_vao(new_vertices, new_indicies);
+        }
+
+        pub fn draw_rectangle_with_texture(&mut self, start_ndc: (f32,f32), width:f32,height:f32, color: Option<[f32;3]>, texture_id: u32){
+            
+            let texture_coords = rectangle_texture_id_to_texture_coords(texture_id);
+
+            let new_vertices: Vec<Vertex> = vec![
+                    Vertex{position: [start_ndc.0, start_ndc.1, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[0]}, 
+                    Vertex{position: [start_ndc.0+width, start_ndc.1, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[1]},
+                    Vertex{position: [start_ndc.0+width, start_ndc.1+height, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[2]},
+                    Vertex{position: [start_ndc.0, start_ndc.1+height, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[3]}];
+            let new_indicies = vec![0, 2, 1, 0, 2, 3];
+        
+            self.add_part_vao(new_vertices, new_indicies);
+        }
+
+        pub fn draw_rectangle_with_specific_texture(&mut self, start_ndc: (f32,f32), width:f32,height:f32, color: Option<[f32;3]>, texture_coords: [[f32;2];4]){
+        
+            let new_vertices: Vec<Vertex> = vec![
+                    Vertex{position: [start_ndc.0, start_ndc.1, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[0]}, 
+                    Vertex{position: [start_ndc.0+width, start_ndc.1, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[1]},
+                    Vertex{position: [start_ndc.0+width, start_ndc.1+height, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[2]},
+                    Vertex{position: [start_ndc.0, start_ndc.1+height, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[3]}];
+            let new_indicies = vec![0, 2, 1, 0, 2, 3];
+        
+            self.add_part_vao(new_vertices, new_indicies);
+        }
+
+        pub fn render_text(&mut self, start_ndc: (f32,f32), font_size: f32, color: Option<[f32;3]>,text: &mut RenderedText){
+            let mut current_pos = start_ndc;
+            text.index_start = self.used_inds as u16;
+            text.vertex_start = self.used_vbo as u32;
+            for char in text.text.chars(){
+                let char_as_num = char as u8;
+                if char_as_num == 10{
+                    current_pos = (start_ndc.0, current_pos.1 - font_size);
+                    continue; 
+                }
+                let bottom_left_tex = CHAR_TO_TEX[char_as_num as usize];
+                //bottom_left_tex[0] = 0.3125;
+
+                //First one is bottom left, second one is bottom right, top right, top left
+                let tex_coords: [[f32;2];4] = [bottom_left_tex, [bottom_left_tex[0]+0.0625, bottom_left_tex[1]], [bottom_left_tex[0]+0.0625, bottom_left_tex[1]+0.125], [bottom_left_tex[0], bottom_left_tex[1]+0.125]];
+                //println!("Tex coords for char {} is {:#?}", char, tex_coords);
+                self.draw_rectangle_with_specific_texture(current_pos, font_size/2.0, font_size, color, tex_coords);
+                current_pos = (current_pos.0 + font_size/2.0, current_pos.1);
+            }
+        }
+        
+        //Implement this...
+        pub fn remove_text(&mut self, text: RenderedText){
+
+        }
 }  
+
+fn rectangle_texture_id_to_texture_coords(id:u32) -> [[f32;2];4]{
+    return [[0.0,1.0],[1.0,0.0],[1.0,1.0],[0.0,0.1]]
+}
 
 pub fn calculate_perspective(dim: (f32, f32)) -> Mat4{
     let perspective = {
@@ -226,13 +305,4 @@ pub fn array_to_vbo(points: Vec<Point>) -> Vec<Vertex>{
         output.push(point_to_vertex(p, UV_HEX[i]));
     }
     return output
-}
-
-pub fn draw_line(start_ndc: (f32,f32), end_ndc: (f32,f32), line_renderer:&mut Renderer){
-    
-    let new_vertices: Vec<Vertex> = vec![Vertex{position: [start_ndc.0, start_ndc.1, 0.0], normal: [0.0,0.0,1.0], tex_coords: [0.0, 0.0]}, Vertex{position: [end_ndc.0, end_ndc.1, 0.0], normal: [0.0,0.0,0.1], tex_coords: [0.0, 0.0]}];
-    let new_indicies = vec![0, 1];
-
-    line_renderer.add_part_vao(new_vertices, new_indicies);
-
 }

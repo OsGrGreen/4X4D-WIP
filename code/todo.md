@@ -31,12 +31,13 @@ I think this should minimize the amount of memory needed.
 
 - [x] Create texture atlas for hex textures
 - [x] Make each hex able to have a texture (from the atlas)
-- [ ] Remove RUSTc  warnings
+- [x] Remove RUSTc  warnings
 - [ ] Make Draw functions
-    - [ ] Draw Square
+    - [x] Draw Square
     - [x] Draw line
-    - [ ] Draw text
-    - [ ] Draw texture
+    - [x] Draw text
+    - [x] Draw texture
+    - [ ] Make it possible to remove drawn text efficiently (both space and time)
 - [ ] Make program use multiple threads
     - [ ] Make a good division of code
     - [ ] Decide what kind of multi-thread model to use
