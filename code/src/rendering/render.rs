@@ -251,20 +251,48 @@ impl <'b>Renderer<'b>{
                     current_pos = (start_ndc.0, current_pos.1 - font_size);
                     continue; 
                 }
-                let bottom_left_tex = CHAR_TO_TEX[char_as_num as usize];
-                //bottom_left_tex[0] = 0.3125;
+                let tex_coords = Renderer::char_to_uv(char as u8);
 
-                //First one is bottom left, second one is bottom right, top right, top left
-                let tex_coords: [[f32;2];4] = [bottom_left_tex, [bottom_left_tex[0]+0.0625, bottom_left_tex[1]], [bottom_left_tex[0]+0.0625, bottom_left_tex[1]+0.125], [bottom_left_tex[0], bottom_left_tex[1]+0.125]];
                 //println!("Tex coords for char {} is {:#?}", char, tex_coords);
                 self.draw_rectangle_with_specific_texture(current_pos, font_size/2.0, font_size, color, tex_coords);
                 current_pos = (current_pos.0 + font_size/2.0, current_pos.1);
             }
+            text.vertex_end = self.used_vbo as u32;
+        }
+
+        pub fn replace_text(&mut self, text: &RenderedText){
+            let mut vert_start = text.vertex_start as usize;
+            for char in text.text.chars(){
+                if vert_start as u32 * 4 > text.vertex_end{
+                    return;
+                }
+                let slice_for_char = self.vbo.slice_mut(vert_start..vert_start+4).unwrap();
+                let mut read_slice = slice_for_char.read().unwrap();
+                let tex_coords = Renderer::char_to_uv(char as u8);
+                //Maybe make this into a loop
+                read_slice[0].tex_coords = tex_coords[0];
+                read_slice[1].tex_coords = tex_coords[1];
+                read_slice[2].tex_coords = tex_coords[2];
+                read_slice[3].tex_coords = tex_coords[3];
+                slice_for_char.write(&read_slice);
+                vert_start += 4;
+            }
+        }
+
+        pub fn remove_subset(&mut self, vertex_start: u32, index_start:u32){
+
         }
         
         //Implement this...
         pub fn remove_text(&mut self, text: RenderedText){
 
+        }
+
+        fn char_to_uv(char_as_num: u8) -> [[f32;2];4]{
+            let bottom_left_tex = CHAR_TO_TEX[char_as_num as usize];
+            //First one is bottom left, second one is bottom right, top right, top left
+            let tex_coords: [[f32;2];4] = [bottom_left_tex, [bottom_left_tex[0]+0.0625, bottom_left_tex[1]], [bottom_left_tex[0]+0.0625, bottom_left_tex[1]+0.125], [bottom_left_tex[0], bottom_left_tex[1]+0.125]];
+            return tex_coords;
         }
 }  
 

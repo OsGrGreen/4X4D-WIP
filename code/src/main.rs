@@ -11,7 +11,7 @@ use std::time::{Instant};
 
 
 mod rendering;
-use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera, text::RenderedText};
+use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera, text::{format_to_exact_length, RenderedText}};
 
 
 mod improvements;
@@ -48,7 +48,6 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
 }
 
 fn main() {
-
 
     //First value is what row, second value is what column
     // 0,0 is bottom left corner
@@ -165,14 +164,13 @@ fn main() {
     let tile_texture_atlas = glium::texture::Texture2d::new(&display, tile_texture_atlas_image).unwrap();
     
 
-    // Font chars are 12 x 6
+            // Font chars are of size 12 x 6
     let font_raw_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\standard_font.png")),
     image::ImageFormat::Png).unwrap().to_rgba8();
     let font_dimensions = font_raw_image.dimensions();
     let font_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&font_raw_image.into_raw(), font_dimensions);
     let font_atlas = glium::texture::Texture2d::new(&display, font_image).unwrap();
 
-    println!("Internal format of font_atlas is {:#?}", font_atlas.get_texture_type());
     //Setup render programs
     let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display, None).unwrap();
     let _trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display, None).unwrap();
@@ -181,10 +179,15 @@ fn main() {
     let mut text_renderer = rendering::render::Renderer::new_empty_dynamic(256, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, Some(text_params)).unwrap();
    
     
-    let mut hello_world_text = RenderedText::new("Hello\nWorld!");
+    let mut fps_text = RenderedText::new(String::from("     fps"));
+    text_renderer.render_text((0.85,0.95), 0.035,Some([1.0,0.5,1.0]),&mut fps_text);
 
-    text_renderer.render_text((-0.5,0.0), 0.1,Some([0.0,1.0,1.0]),&mut hello_world_text);
-    
+    /*text_renderer.render_text((-0.5,0.5), 0.1,Some([1.0,0.3,1.0]),&mut hello_world_text_2);
+    println!("Text is: {:#?}", hello_world_text);
+    hello_world_text.change_text("Gijjo Oskar???");
+    println!("Text is: {:#?}", hello_world_text);
+    text_renderer.replace_text(hello_world_text);
+    */
     
     // Add some stuff to the renderers
 
@@ -267,6 +270,9 @@ fn main() {
     let mut mouse_ndc: Vec3 = Vec3::ZERO;
 
     let mut timer = Instant::now();
+    let mut overall_fps = 0.0;
+    let smoothing = 0.2; // larger=more smoothing
+    
     let _ = event_loop.run(move |event, window_target| {
 
         //println!("timer: {}", timer2.elapsed().as_millis());
@@ -274,8 +280,17 @@ fn main() {
         //Delta time calculation may be wrong...
         //There is kinda of stuttery movement...
         //Could also be movement calculations...
-        let delta_time = (timer.elapsed().as_micros() as f32/1000.0).clamp(0.18, 10.0);
+        let delta_time = (timer.elapsed().as_micros() as f32/1000.0);
+        // Get fps
+        let current = (frames / timer.elapsed().as_micros() as f32) / 1000000.0;
+        overall_fps = (overall_fps * smoothing) + (current * (1.0-smoothing));
+        let fps_as_text = format_to_exact_length(overall_fps as u32, 4) + " fps";
+        fps_text.change_text(fps_as_text);
+        text_renderer.replace_text(&fps_text);
         timer = Instant::now();
+
+       
+
 
 
         //Update movement (Kanske göra efter allt annat... possibly):
@@ -385,7 +400,7 @@ fn main() {
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
                     println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
 
-                    line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
+                    //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
                 }
             }
 
