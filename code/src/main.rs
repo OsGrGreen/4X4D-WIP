@@ -18,6 +18,7 @@ mod improvements;
 mod util;
 mod player;
 mod world;
+mod units;
 
 
 #[derive(Copy, Clone, Debug)]
@@ -179,7 +180,7 @@ fn main() {
     let mut text_renderer = rendering::render::Renderer::new_empty_dynamic(256, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, Some(text_params)).unwrap();
    
     
-    let mut fps_text = RenderedText::new(String::from("     fps"));
+    let mut fps_text = RenderedText::new(String::from("00000fps"));
     text_renderer.render_text((0.85,0.95), 0.035,Some([1.0,0.5,1.0]),&mut fps_text);
 
     /*text_renderer.render_text((-0.5,0.5), 0.1,Some([1.0,0.3,1.0]),&mut hello_world_text_2);
@@ -271,7 +272,7 @@ fn main() {
 
     let mut timer = Instant::now();
     let mut overall_fps = 0.0;
-    let smoothing = 0.2; // larger=more smoothing
+    let smoothing = 0.7; // larger=more smoothing
     
     let _ = event_loop.run(move |event, window_target| {
 
@@ -280,11 +281,11 @@ fn main() {
         //Delta time calculation may be wrong...
         //There is kinda of stuttery movement...
         //Could also be movement calculations...
-        let delta_time = (timer.elapsed().as_micros() as f32/1000.0);
+        let delta_time = (timer.elapsed().as_micros() as f32/1000.0).clamp(0.05, 10.0);
         // Get fps
-        let current = (frames / timer.elapsed().as_micros() as f32) / 1000000.0;
-        overall_fps = (overall_fps * smoothing) + (current * (1.0-smoothing));
-        let fps_as_text = format_to_exact_length(overall_fps as u32, 4) + " fps";
+        let current = (1.0 / timer.elapsed().as_micros() as f32) * 1000000.0;
+        overall_fps = ((overall_fps * smoothing) + (current * (1.0-smoothing))).min(50_000.0);
+        let fps_as_text = format_to_exact_length(overall_fps as u32, 5) + "fps";
         fps_text.change_text(fps_as_text);
         text_renderer.replace_text(&fps_text);
         timer = Instant::now();
@@ -329,7 +330,7 @@ fn main() {
             if traveresed_whole_hex{
                 let update_hex_map_timer = Instant::now();
                 draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
-                println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
+                //println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
             }
             let intersect = ndc_to_intersection(&mouse_ndc,&camera_matrix,camera.get_pos(),&perspective);
             mouse_pos.x = intersect.x as f32;

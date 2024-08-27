@@ -37,8 +37,9 @@ I think this should minimize the amount of memory needed.
     - [x] Draw line
     - [x] Draw text
     - [x] Draw texture
+    - [x] Change drawn text
     - [ ] Make it possible to remove drawn text efficiently (both space and time)
-- [ ] Make program use multiple threads
+- [ ] Make program use multiple threads (not a priority since it runs on 50_000+ fps)
     - [ ] Make a good division of code
     - [ ] Decide what kind of multi-thread model to use
 - [ ] Add units
@@ -50,6 +51,7 @@ I think this should minimize the amount of memory needed.
         - [ ] Attacking
         - [ ] Knowing which units are beside you
     - [ ] Add creation of units (player input)
+- [ ] Update input logic and so on
 - [ ] Make logic for building cities and buildings in cities
 - [ ] Make player able to have land
 - [ ] Make menus and stuff
