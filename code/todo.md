@@ -42,6 +42,8 @@ I think this should minimize the amount of memory needed.
 - [ ] Make program use multiple threads (not a priority since it runs on 50_000+ fps)
     - [ ] Make a good division of code
     - [ ] Decide what kind of multi-thread model to use
+- [x] Fix rendering bugs
+- [ ] Limit framerate
 - [ ] Add units
     - [ ] Have some clever way to know when to render units
     - [ ] Make code for automatically adding units to be rendered
@@ -55,6 +57,7 @@ I think this should minimize the amount of memory needed.
 - [ ] Make logic for building cities and buildings in cities
 - [ ] Make player able to have land
 - [ ] Make menus and stuff
+    -  [ ] Settings
 - [ ] Make loading screens maybe?
 - [ ] Move out constants (like texture atlas and so on) into seperate files for easy modification...
  

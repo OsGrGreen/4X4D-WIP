@@ -7,6 +7,7 @@ use winit::window::Window; */
 
 use glam::Mat4;
 use glium::{glutin::surface::WindowSurface, uniforms::{AsUniformValue, Uniforms, UniformsStorage}, Display, DrawParameters, Frame, Program, Surface, VertexBuffer};
+use rayon::iter::empty;
 
 use crate::world::layout::Point;
 
@@ -137,9 +138,12 @@ impl <'b>Renderer<'b>{
             let vbo:VertexBuffer<Vertex> = glium::VertexBuffer::empty_dynamic(disp, max_elements).unwrap();
 
             let program = glium::Program::from_source(disp, vert_shader, frag_shader, geo_shader).unwrap();
-
-            let indicies = glium::IndexBuffer::empty_dynamic(disp, prim_type.unwrap_or(glium::index::PrimitiveType::TrianglesList), max_elements*3).unwrap();
-
+            let mut empty_vec:Vec<u16> = Vec::with_capacity(max_elements*3);
+            for i in 0..max_elements*3{
+                empty_vec.push(0);
+            }
+            let indicies = glium::IndexBuffer::dynamic(disp, prim_type.unwrap_or(glium::index::PrimitiveType::TrianglesList), &empty_vec).unwrap();
+            indicies.invalidate();
             Ok(Renderer{
                     vbo: vbo.into(),
                     indicies: indicies,
@@ -242,6 +246,9 @@ impl <'b>Renderer<'b>{
         }
 
         pub fn render_text(&mut self, start_ndc: (f32,f32), font_size: f32, color: Option<[f32;3]>,text: &mut RenderedText){
+            if self.used_inds == 0{
+                self.indicies.invalidate();
+            }
             let mut current_pos = start_ndc;
             text.index_start = self.used_inds as u16;
             text.vertex_start = self.used_vbo as u32;
@@ -264,6 +271,8 @@ impl <'b>Renderer<'b>{
             let mut vert_start = text.vertex_start as usize;
             for char in text.text.chars(){
                 if vert_start as u32 * 4 > text.vertex_end{
+                    //println!("After replacing text: {:#?}\n", self.indicies.read().unwrap());
+
                     return;
                 }
                 let slice_for_char = self.vbo.slice_mut(vert_start..vert_start+4).unwrap();
@@ -277,6 +286,8 @@ impl <'b>Renderer<'b>{
                 slice_for_char.write(&read_slice);
                 vert_start += 4;
             }
+            //println!("After replacing text: {:#?}\n", self.indicies.read().unwrap());
+
         }
 
         pub fn remove_subset(&mut self, vertex_start: u32, index_start:u32){
