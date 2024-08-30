@@ -7,6 +7,8 @@ pub struct RenderCamera{
     camera_target: Vec3,
     camera_up: Vec3,
     camera_front: Vec3,
+    pub perspective: Mat4,
+    pub camera_matrix: Mat4,
 }
 
 const SQRT3:f32 = 1.7320508;
@@ -15,7 +17,7 @@ impl RenderCamera{
 
     pub fn new(start_pos: Vec3, target:Vec3, up:Vec3, front:Vec3) -> RenderCamera{
 
-        RenderCamera{camera_pos:start_pos, camera_target:target,camera_up:up, camera_front:front}
+        RenderCamera{camera_pos:start_pos, camera_target:target,camera_up:up, camera_front:front, perspective:Mat4::ZERO, camera_matrix: Mat4::ZERO}
     }
 
     pub fn get_pos(&self) -> Vec3{

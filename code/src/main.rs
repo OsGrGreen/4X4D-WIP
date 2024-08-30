@@ -5,7 +5,7 @@ use rand::distr::{Distribution, Uniform};
 use glam::{Vec3};
 use util::{input_handler::InputHandler, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
-use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface};
+use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface, VertexBuffer};
 use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
 use std::time::{Instant};
 
@@ -48,6 +48,14 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
     (event_loop, window, display)
 }
 
+//Camera constants
+
+const CAMERA_SPEED:f32 = 0.2;
+
+const CONSTANT_FACTOR:f32 = 1.0;
+
+
+
 fn main() {
 
     //First value is what row, second value is what column
@@ -75,17 +83,14 @@ fn main() {
 
     let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,4.5), Vec3::new(0.0,0.0,0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0,0.0,-1.0));
 
-    //Camera constants
-
-    const CAMERA_SPEED:f32 = 0.002;
 
     // Input handler
 
     let mut input_handler = InputHandler::new();
 
-    let mut camera_matrix: glam::Mat4 = camera.look_at(camera.get_pos()+camera.get_front());
+    camera.camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
     //println!("camera matrix glm is {:#?}", RenderCamera::look_at_glm(Vec3::new(2.0,-1.0,1.0), Vec3::new(-2.0,1.0,1.0),Vec3::new(0.0,1.0,0.0)));
-    //println!("camera matrix is: {:#?}", camera_matrix);
+    //println!("camera matrix is: {:#?}", camera.camera_matrix);
     // 1. The **winit::EventLoop** for handling events.
     let (event_loop, window, display) = init_window();
     // Check if windows then: 
@@ -111,9 +116,7 @@ fn main() {
         [0.0, 0.0, 0.0, 1.0f32]
     ];
 
-    let constant_factor = 1.0;
-
-    println!("constant_factor is {}", constant_factor);
+    println!("constant_factor is {}", CONSTANT_FACTOR);
     
 
     let hex = Hex::new(0, 0, 0);
@@ -205,7 +208,7 @@ fn main() {
 
     let _light = [-1.0, 0.4, 0.9f32];
 
-    let mut perspective = rendering::render::calculate_perspective(window.inner_size().into());
+    camera.perspective = rendering::render::calculate_perspective(window.inner_size().into());
     let mut frames:f32 = 0.0;
 
 
@@ -273,7 +276,6 @@ fn main() {
     let mut timer = Instant::now();
     let mut overall_fps = 0.0;
     let smoothing = 0.7; // larger=more smoothing
-    
     let _ = event_loop.run(move |event, window_target| {
 
         //println!("timer: {}", timer2.elapsed().as_millis());
@@ -281,64 +283,6 @@ fn main() {
         //Delta time calculation may be wrong...
         //There is kinda of stuttery movement...
         //Could also be movement calculations...
-        let delta_time = (timer.elapsed().as_micros() as f32/1000.0).clamp(0.05, 10.0);
-        // Get fps
-        let current = (1.0 / timer.elapsed().as_micros() as f32) * 1000000.0;
-        overall_fps = ((overall_fps * smoothing) + (current * (1.0-smoothing))).min(50_000.0);
-        let fps_as_text = format_to_exact_length(overall_fps as u32, 5) + "fps";
-        fps_text.change_text(fps_as_text);
-        text_renderer.replace_text(&fps_text);
-        timer = Instant::now();
-
-       
-
-
-
-        //Update movement (Kanske göra efter allt annat... possibly):
-        let mut movement = input_handler.get_movement();
-        if movement.length() > 0.0{
-            let mut traveresed_whole_hex = false;
-            movement = movement.normalize();
-            //Flytta en i taget...
-            camera.r#move(delta_time*movement[1]*CAMERA_SPEED*camera.get_up());
-            let y_pos = camera.get_pos()[1];
-            //Inte helt perfekt än måste fixa till lite....
-            if y_pos < -constant_factor*(3.0*(layout.get_height())){
-                camera.set_y(0.0);
-                world_camera.move_camera(0, -3);
-                traveresed_whole_hex = true;
-            } else if y_pos > constant_factor*(3.0*(layout.get_height())){
-                camera.set_y(0.0);
-                world_camera.move_camera(0, 3);
-                traveresed_whole_hex = true;
-            }        
-            camera.r#move(delta_time*movement[0]*CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
-            let x_pos = camera.get_pos()[0];
-                        //Kom på varför det är 0.12 här och inget annat nummer...
-                        //Verkar ju bara bero på hex_size och inte scale....
-            if x_pos < -constant_factor*2.0*(layout.get_width()){
-                camera.set_x(0.0);
-                world_camera.move_camera(-2, 0);
-                traveresed_whole_hex = true;
-            }else if x_pos > constant_factor*2.0*(layout.get_width()){
-                camera.set_x(0.0);
-                world_camera.move_camera(2, 0);
-                traveresed_whole_hex = true;
-            }
-            //println!("Camera is: {}", camera.get_pos());
-            //Gör så kameran bara uppdateras när man faktiskt rör på sig...
-            if traveresed_whole_hex{
-                let update_hex_map_timer = Instant::now();
-                draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
-                //println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
-            }
-            let intersect = ndc_to_intersection(&mouse_ndc,&camera_matrix,camera.get_pos(),&perspective);
-            mouse_pos.x = intersect.x as f32;
-            mouse_pos.y = intersect.y as f32;
-            camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-            //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
-        }
-
 
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
@@ -356,7 +300,7 @@ fn main() {
                     0.0,
                 );
 
-                let intersect = ndc_to_intersection(&mouse_ndc,&camera_matrix,camera.get_pos(),&perspective);
+                let intersect = ndc_to_intersection(&mouse_ndc,&camera.camera_matrix,camera.get_pos(),&camera.perspective);
 
 
                 mouse_pos.x = intersect.x as f32;
@@ -415,13 +359,13 @@ fn main() {
                 } 
                 else if event.physical_key == keyboard::KeyCode::KeyQ && event.state.is_pressed(){
                     camera.r#move(50.0*-CAMERA_SPEED*camera.get_front());
-                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-                    //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
+                    camera.camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                    //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&camera.perspective)*camera.camera_matrix*Mat4::IDENTITY));
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyE{
                     camera.r#move(50.0*CAMERA_SPEED*camera.get_front());
-                    camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
-                    //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
+                    camera.camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                    //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&camera.perspective)*camera.camera_matrix*Mat4::IDENTITY));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
                     world_camera.move_camera(0, 1);
                     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
@@ -444,15 +388,28 @@ fn main() {
 
             },
             winit::event::WindowEvent::Resized(window_size) => {
-                perspective = rendering::render::calculate_perspective(window_size.into());
-                //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
+                camera.perspective = rendering::render::calculate_perspective(window_size.into());
+                //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&camera.perspective)*camera.camera_matrix*Mat4::IDENTITY));
                 display.resize(window_size.into());
                 width_scale = window_size.width as f64/ std_width;
                 height_scale = window_size.height as f64/ std_height;
                 println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
-                //println!("Redraw requested");
+
+                let delta_time = timer.elapsed().as_secs_f32();
+                timer = Instant::now();
+                // Get fps
+                let current = 1.0 / delta_time;
+                overall_fps = ((overall_fps * smoothing) + (current * (1.0-smoothing))).min(50_000.0);
+                let fps_as_text = format_to_exact_length(overall_fps as u32, 5) + "fps";
+                fps_text.change_text(fps_as_text);
+                text_renderer.replace_text(&fps_text);
+                //println!("Redraw requested");´
+
+                update_game_logic(delta_time, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut per_instance, mouse_ndc, &mut mouse_pos, screen_size);
+
+
                 let dur2 = Instant::now();
                 //time += 0.02;
 
@@ -467,7 +424,7 @@ fn main() {
                     // For different hexes make a texture atlas so a specific tile has a texture in the atlas
                     // Then each instance have different UV coords! 
                     &hex_renderer.program,
-                    &uniform! { model: hex_size_mat, projection: perspective.to_cols_array_2d(), view:camera_matrix.to_cols_array_2d(), tex: &tile_texture_atlas},
+                    &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: &tile_texture_atlas},
                     &glium::DrawParameters {
                         depth: glium::Depth {
                             test: glium::DepthTest::IfLess,
@@ -483,7 +440,7 @@ fn main() {
                 target.draw(&line_renderer.vbo, &line_renderer.indicies, &line_renderer.program, &uniform! {}, &line_renderer.draw_params).unwrap();
                 target.draw(&ui_renderer.vbo, &ui_renderer.indicies, &ui_renderer.program, &uniform! {tex:&font_atlas}, &Default::default()).unwrap();
                 target.draw(&text_renderer.vbo, &text_renderer.indicies, &text_renderer.program, &uniform! {tex:glium::uniforms::Sampler(&font_atlas, text_behavior)}, &text_renderer.draw_params).unwrap();
-                //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera_matrix.to_cols_array_2d(), u_light:light}));
+                //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera.camera_matrix.to_cols_array_2d(), u_light:light}));
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
                 //println!("\t\tUploading info to GPU took: {} ms", dur2.elapsed().as_millis());
 
@@ -505,4 +462,53 @@ fn main() {
         frames = frames + 1.0;
 
     });
+}
+
+
+fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,per_instance:&mut VertexBuffer<Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32)){
+    //Update movement (Kanske göra efter allt annat... possibly):
+    let mut movement = input_handler.get_movement();
+    println!("{}", movement);
+    if movement.length() > 0.0{
+        let mut traveresed_whole_hex = false;
+        movement = movement.normalize();
+        //Flytta en i taget...
+        camera.r#move(delta_time*movement[1]*CAMERA_SPEED*camera.get_up());
+        let y_pos = camera.get_pos()[1];
+        //Inte helt perfekt än måste fixa till lite....
+        if y_pos < -CONSTANT_FACTOR*(3.0*(layout.get_height())){
+            camera.set_y(0.0);
+            world_camera.move_camera(0, -3);
+            traveresed_whole_hex = true;
+        } else if y_pos > CONSTANT_FACTOR*(3.0*(layout.get_height())){
+            camera.set_y(0.0);
+            world_camera.move_camera(0, 3);
+            traveresed_whole_hex = true;
+        }        
+        camera.r#move(delta_time*movement[0]*CAMERA_SPEED*(camera.get_front().cross(camera.get_up())).normalize());
+            let x_pos = camera.get_pos()[0];
+                //Kom på varför det är 0.12 här och inget annat nummer...
+                //Verkar ju bara bero på hex_size och inte scale....
+            if x_pos < -CONSTANT_FACTOR*2.0*(layout.get_width()){
+                camera.set_x(0.0);
+                world_camera.move_camera(-2, 0);
+                traveresed_whole_hex = true;
+            }else if x_pos > CONSTANT_FACTOR*2.0*(layout.get_width()){
+                camera.set_x(0.0);
+                world_camera.move_camera(2, 0);
+                traveresed_whole_hex = true;
+            }
+            //println!("Camera is: {}", camera.get_pos());
+            //Gör så kameran bara uppdateras när man faktiskt rör på sig...
+            if traveresed_whole_hex{
+                let update_hex_map_timer = Instant::now();
+                draw_functions::update_hex_map_colors(per_instance, world_vec, world_camera.offsets(),screen_size);
+                //println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
+            }
+            let intersect = ndc_to_intersection(&mouse_ndc,&camera.camera_matrix,camera.get_pos(),&camera.perspective);
+            mouse_pos.x = intersect.x as f32;
+            mouse_pos.y = intersect.y as f32;
+            camera.camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+                //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
+        }
 }
