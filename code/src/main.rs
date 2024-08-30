@@ -185,8 +185,8 @@ fn main() {
 
 
     let mut button_handler = ButtonHandler::new();
-    //button_handler.add_button((0.0,0.0), 0.1, 0.1, 0, ButtonType::Open);
-    button_handler.render(None, &mut ui_renderer);
+    button_handler.add_button((0.0,0.0), 0.1, 0.1, 0, ButtonType::Open, None);
+    button_handler.render(&mut ui_renderer);
     let mut fps_box = InfoBox::new(0, (0.85,0.95), 0.05*8.0, 0.05, 0);
     fps_box.add_text(RenderedText::new(String::from("00000fps"), 0, 0.035, (0.85,0.95)));
     fps_box.render([0.0,0.0,0.0], [1.0, 0.5,1.0], &mut ui_renderer, &mut text_renderer);
@@ -381,6 +381,7 @@ fn main() {
                     let pressed_button = button_handler.get_pressed_button(&(mouse_ndc.x,mouse_ndc.y));
                     if pressed_button.is_some(){
                         let but = pressed_button.unwrap();
+                        but.update_color(&mut ui_renderer);
                         println!("{:?}", but);                        
                     }else{
                         //println!("Dimension is: {:#?}", window.inner_size());
@@ -422,6 +423,8 @@ fn main() {
                     
 
                     //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
+                }else{
+                    button_handler.release_buttons(&mut ui_renderer);
                 }
             }
 
@@ -472,7 +475,6 @@ fn main() {
                 println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
-                println!("Time since last rendered frame: {}", count_times_between_rendered_frames.elapsed().as_secs_f32());
                 
                 let dur2 = Instant::now();
                 //time += 0.02;

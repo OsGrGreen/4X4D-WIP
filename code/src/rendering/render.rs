@@ -293,6 +293,16 @@ impl <'b>Renderer<'b>{
 
         }
 
+        pub fn replace_color(&mut self, color: [f32;3],vbo_start: u32, vbo_end:u32){
+            let replace_slice = self.vbo.slice_mut(vbo_start as usize..vbo_end as usize).unwrap();
+            let mut read_slice = replace_slice.read().unwrap();
+            for i in vbo_start..vbo_end{
+                read_slice[i as usize].normal = color;
+            }
+
+            replace_slice.write(&read_slice);
+        }
+
         pub fn remove_subset(&mut self, vertex_start: u32, index_start:u32, len:u32){
             self.vbo.slice_mut(vertex_start as usize..(vertex_start+len) as usize).unwrap().invalidate();
             self.indicies.slice_mut(index_start as usize..(index_start+len*3) as usize).unwrap().invalidate();
