@@ -264,14 +264,16 @@ impl <'b>Renderer<'b>{
                 self.draw_rectangle_with_specific_texture(current_pos, font_size/2.0, font_size, color, tex_coords);
                 current_pos = (current_pos.0 + font_size/2.0, current_pos.1);
             }
+            println!("End of text: {}", self.used_vbo);
             text.vertex_end = self.used_vbo as u32;
         }
 
         pub fn replace_text(&mut self, text: &RenderedText){
             let mut vert_start = text.vertex_start as usize;
-            //Add way to force it to be a specific length...
             for char in text.text.chars(){
-
+                if vert_start+4 > text.vertex_end as usize{
+                    return;
+                }
                 let slice_for_char = self.vbo.slice_mut(vert_start..vert_start+4).unwrap();
                 let mut read_slice = slice_for_char.read().unwrap();
                 let tex_coords = Renderer::char_to_uv(char as u8);
@@ -284,7 +286,6 @@ impl <'b>Renderer<'b>{
                 vert_start += 4;
             }
             //println!("After replacing text: {:#?}\n", self.indicies.read().unwrap());
-
         }
 
         pub fn remove_subset(&mut self, vertex_start: u32, index_start:u32){
