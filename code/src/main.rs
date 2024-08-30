@@ -7,6 +7,7 @@ use util::{input_handler::InputHandler, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window, WindowBuilder}};
 use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface};
 use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
+use UI::{button::ButtonType, button_handler::ButtonHandler, InfoBox::InfoBox};
 use std::{os::windows::thread, thread::sleep, time::{Duration, Instant}};
 
 
@@ -20,6 +21,7 @@ mod player;
 mod world;
 mod units;
 mod UI;
+mod states;
 
 
 #[derive(Copy, Clone, Debug)]
@@ -159,7 +161,7 @@ fn main() {
     };
 
     //Read textures
-    let tile_texture_atlas_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\texture_atlas_tiles.png")),
+    let tile_texture_atlas_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\texture_atlas_tiles_2.png")),
                         image::ImageFormat::Png).unwrap().to_rgba8();
     let image_dimensions = tile_texture_atlas_image.dimensions();
     let tile_texture_atlas_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&tile_texture_atlas_image.into_raw(), image_dimensions);
@@ -180,9 +182,18 @@ fn main() {
     let mut ui_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, None).unwrap();
     let mut text_renderer = rendering::render::Renderer::new_empty_dynamic(256, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, Some(text_params)).unwrap();
    
-    
-    let mut fps_text = RenderedText::new(String::from("00000fps"));
-    text_renderer.render_text((0.85,0.95), 0.035,Some([1.0,0.5,1.0]),&mut fps_text);
+
+
+    let mut button_handler = ButtonHandler::new();
+    //button_handler.add_button((0.0,0.0), 0.1, 0.1, 0, ButtonType::Open);
+    button_handler.render(None, &mut ui_renderer);
+    let mut fps_box = InfoBox::new(0, (0.85,0.95), 0.05*8.0, 0.05, 0);
+    fps_box.add_text(RenderedText::new(String::from("00000fps"), 0, 0.035, (0.85,0.95)));
+    fps_box.render([0.0,0.0,0.0], [1.0, 0.5,1.0], &mut ui_renderer, &mut text_renderer);
+    //text_renderer.render_text(Some([1.0,0.5,1.0]),&mut fps_text);
+
+
+
 
     /*text_renderer.render_text((-0.5,0.5), 0.1,Some([1.0,0.3,1.0]),&mut hello_world_text_2);
     println!("Text is: {:#?}", hello_world_text);
@@ -272,6 +283,7 @@ fn main() {
     let mut mouse_ndc: Vec3 = Vec3::ZERO;
 
     let mut timer = Instant::now();
+    let mut count_times_between_rendered_frames = Instant::now();
     let mut overall_fps = 0.0;
     let smoothing = 0.7; // larger=more smoothing
     
@@ -283,16 +295,16 @@ fn main() {
         //Delta time calculation may be wrong...
         //There is kinda of stuttery movement...
         //Could also be movement calculations...
-        let delta_time = (timer.elapsed().as_micros() as f32/1000.0).clamp(0.005, 10.0);
+        let delta_time = (timer.elapsed().as_micros() as f32/1000.0).clamp(0.005, 1000.0);
         //println!("{}",timer.elapsed().as_micros() as f32 / 1000000.0);
         // Get fps
         let current = 1.0 / (timer.elapsed().as_micros() as f32 / 1000000.0) ;
         overall_fps = ((overall_fps * smoothing) + (current * (1.0-smoothing))).min(50_000.0);
         let fps_as_text = format_to_exact_length(overall_fps as u32, 5) + "fps";
-        fps_text.change_text(fps_as_text);
+        fps_box.texts[0].change_text(fps_as_text);
         //println!("Is gonna replace");
-        text_renderer.replace_text(&fps_text);
-        
+        text_renderer.replace_text(&fps_box.texts[0]);
+        timer = Instant::now();
 
         //Update movement (Kanske göra efter allt annat... possibly):
         let mut movement = input_handler.get_movement();
@@ -328,7 +340,7 @@ fn main() {
             //println!("Camera is: {}", camera.get_pos());
             //Gör så kameran bara uppdateras när man faktiskt rör på sig...
             if traveresed_whole_hex{
-                let update_hex_map_timer = Instant::now();
+                //let update_hex_map_timer = Instant::now();
                 draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
                 //println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
             }
@@ -336,6 +348,7 @@ fn main() {
             mouse_pos.x = intersect.x as f32;
             mouse_pos.y = intersect.y as f32;
             camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
+            window.request_redraw();
             //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
         }
 
@@ -365,41 +378,48 @@ fn main() {
             winit::event::WindowEvent::MouseInput { device_id: _, state, button } =>{
                 if state.is_pressed(){
 
-                    //println!("Dimension is: {:#?}", window.inner_size());
-                    let frac_hex = layout.pixel_to_hex(&mouse_pos);
-                    let clicked_hex = frac_hex.hex_round();
-                    
-                    let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);                    
-                    
-                    //Make these not hard coded...
-                    // And move out into seperate function
-                    clicked_y = 25 - clicked_y as isize;
-                    clicked_x = 12 - clicked_x as isize;
-    
-                    let camera_offsets = world_camera.offsets();
-    
-                    //Make these then loop when crossing over the boundary.
-                    clicked_x += camera_offsets.1; 
-                    clicked_y += camera_offsets.0;
+                    let pressed_button = button_handler.get_pressed_button(&(mouse_ndc.x,mouse_ndc.y));
+                    if pressed_button.is_some(){
+                        let but = pressed_button.unwrap();
+                        println!("{:?}", but);                        
+                    }else{
+                        //println!("Dimension is: {:#?}", window.inner_size());
+                        let frac_hex = layout.pixel_to_hex(&mouse_pos);
+                        let clicked_hex = frac_hex.hex_round();
+                        
+                        let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);                    
+                        
+                        //Make these not hard coded...
+                        // And move out into seperate function
+                        clicked_y = 25 - clicked_y as isize;
+                        clicked_x = 12 - clicked_x as isize;
+        
+                        let camera_offsets = world_camera.offsets();
+        
+                        //Make these then loop when crossing over the boundary.
+                        clicked_x += camera_offsets.1; 
+                        clicked_y += camera_offsets.0;
 
-                    if clicked_x <= 0{
-                        clicked_x = ((NUM_COLMS) as isize + clicked_x) % NUM_COLMS as isize;
-                    }else if clicked_x >= NUM_COLMS as isize{
-                        clicked_x = (clicked_x - (NUM_COLMS) as isize) % NUM_COLMS as isize;
-                    }  
+                        if clicked_x <= 0{
+                            clicked_x = ((NUM_COLMS) as isize + clicked_x) % NUM_COLMS as isize;
+                        }else if clicked_x >= NUM_COLMS as isize{
+                            clicked_x = (clicked_x - (NUM_COLMS) as isize) % NUM_COLMS as isize;
+                        }  
+                        
+
+                        if clicked_y <= 0{
+                            clicked_y = ((NUM_ROWS) as isize + clicked_y) % NUM_ROWS as isize;
+                        }else if clicked_y >= NUM_ROWS as isize{
+                            clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
+                        }  
+
+                        // Do not do the update here (add it to the job queue)
+                        let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
+                        world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
+                        draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                        println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
+                    }
                     
-
-                    if clicked_y <= 0{
-                        clicked_y = ((NUM_ROWS) as isize + clicked_y) % NUM_ROWS as isize;
-                    }else if clicked_y >= NUM_ROWS as isize{
-                        clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
-                    }  
-
-                    // Do not do the update here (add it to the job queue)
-                    let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
-                    world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
-                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
-                    println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
 
                     //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
                 }
@@ -452,7 +472,8 @@ fn main() {
                 println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
-                //println!("Redraw requested");
+                println!("Time since last rendered frame: {}", count_times_between_rendered_frames.elapsed().as_secs_f32());
+                
                 let dur2 = Instant::now();
                 //time += 0.02;
 
@@ -488,6 +509,7 @@ fn main() {
                 //println!("\t\tUploading info to GPU took: {} ms", dur2.elapsed().as_millis());
                 //sleep(Duration::from_millis(14));
                 target.finish().unwrap();
+                count_times_between_rendered_frames = Instant::now();
                 //println!("\t\tTime for drawing frame: {} ms\n", dur2.elapsed().as_millis());
             },
             _ => (),
@@ -498,11 +520,16 @@ fn main() {
             _ => (),
         };
 
+        //This breaks the text_renderer for some reason...
+        /*if timer.elapsed().as_micros() as f32/ 1000.0 <= 16.7{
+            let sleep_time = 16.7 - timer.elapsed().as_micros() as f32/ 1000.0;
+            sleep(Duration::from_secs_f32(sleep_time/1000.0));
+        }*/
+
         // I think this solution is broken. 
         // Can get stuck in infinite screen or something
         // Works for now but needs to be fixed...
         //println!("One frame took {} ms\n", now.elapsed().as_millis());
         frames = frames + 1.0;
-        timer = Instant::now();
     });
 }

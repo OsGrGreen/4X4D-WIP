@@ -1,19 +1,25 @@
 #[derive(Clone, Debug)]
 pub struct RenderedText{
+    pub id: u32,
     pub text: String,
     pub vertex_start: u32,
     pub index_start: u16,
     pub vertex_end: u32,
+    pub screen_pos: (f32,f32),
+    pub font_size: f32,
 }
 
 impl RenderedText{
 
-    pub fn new(text: String) -> RenderedText{
+    pub fn new(text: String, id: u32,font_size: f32,screen_pos: (f32,f32)) -> RenderedText{
         RenderedText{
+            id: id,
             text:text,
             vertex_start: 0,
             index_start: 0,
             vertex_end: 0,
+            screen_pos: screen_pos,
+            font_size: font_size,
         }
     }
 

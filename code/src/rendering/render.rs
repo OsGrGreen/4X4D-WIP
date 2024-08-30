@@ -170,18 +170,18 @@ impl <'b>Renderer<'b>{
                 
         }
 
-        pub fn add_part_vao(&mut self, new_vertices: Vec<Vertex>, new_indicies: Vec<u16>){
+        pub fn add_part_vao(&mut self, new_vertices: Vec<Vertex>, new_indicies: Vec<u16>) -> (u32,u32){
 
             //Only allow vao to be modified if VAO is dynamic
         
             if self.is_dynamic{
 
                 // Can probably be done in a nicer way but works for now
-
+                let start_new_vbo = self.used_vbo;
                 let end_new_vbo = new_vertices.len()+self.used_vbo;
                 let end_new_indicies = new_indicies.len()+self.used_inds;
                 if end_new_vbo > self.vbo.len() || end_new_indicies > self.indicies.len(){
-                    return;
+                    return (0,0);
                 }
                 let update_slice_vbo = self.vbo.slice_mut(self.used_vbo..end_new_vbo).unwrap();
                 update_slice_vbo.write(&new_vertices);
@@ -193,8 +193,9 @@ impl <'b>Renderer<'b>{
                 update_slice_indicies.write(&fixed_inds);
                 self.used_vbo = end_new_vbo;
                 self.used_inds = end_new_indicies;
+                return (start_new_vbo as u32,end_new_vbo as u32);
             }else{
-                return
+                return (0,0)
             }
         }
 
@@ -207,7 +208,7 @@ impl <'b>Renderer<'b>{
         
         }
         
-        pub fn draw_rectangle(&mut self, start_ndc: (f32,f32), width:f32,height:f32, color: Option<[f32;3]>){
+        pub fn draw_rectangle(&mut self, start_ndc: (f32,f32), width:f32,height:f32, color: Option<[f32;3]>) -> (u32, u32){
         
             let new_vertices: Vec<Vertex> = vec![
                     Vertex{position: [start_ndc.0, start_ndc.1, 0.0], normal: color.unwrap_or([1.0,0.0,0.0]), tex_coords: [0.0, 0.0]}, 
@@ -216,10 +217,10 @@ impl <'b>Renderer<'b>{
                     Vertex{position: [start_ndc.0, start_ndc.1+height, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: [0.0, 0.0]}];
             let new_indicies = vec![0, 2, 1, 0, 2, 3];
         
-            self.add_part_vao(new_vertices, new_indicies);
+            self.add_part_vao(new_vertices, new_indicies)
         }
 
-        pub fn draw_rectangle_with_texture(&mut self, start_ndc: (f32,f32), width:f32,height:f32, color: Option<[f32;3]>, texture_id: u32){
+        pub fn draw_rectangle_with_texture(&mut self, start_ndc: (f32,f32), width:f32,height:f32, color: Option<[f32;3]>, texture_id: u32) -> (u32, u32){
             
             let texture_coords = rectangle_texture_id_to_texture_coords(texture_id);
 
@@ -230,10 +231,10 @@ impl <'b>Renderer<'b>{
                     Vertex{position: [start_ndc.0, start_ndc.1+height, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[3]}];
             let new_indicies = vec![0, 2, 1, 0, 2, 3];
         
-            self.add_part_vao(new_vertices, new_indicies);
+            self.add_part_vao(new_vertices, new_indicies)
         }
 
-        pub fn draw_rectangle_with_specific_texture(&mut self, start_ndc: (f32,f32), width:f32,height:f32, color: Option<[f32;3]>, texture_coords: [[f32;2];4]){
+        pub fn draw_rectangle_with_specific_texture(&mut self, start_ndc: (f32,f32), width:f32,height:f32, color: Option<[f32;3]>, texture_coords: [[f32;2];4]) -> (u32, u32){
         
             let new_vertices: Vec<Vertex> = vec![
                     Vertex{position: [start_ndc.0, start_ndc.1, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[0]}, 
@@ -242,31 +243,33 @@ impl <'b>Renderer<'b>{
                     Vertex{position: [start_ndc.0, start_ndc.1+height, 0.0], normal: color.unwrap_or([1.0,1.0,1.0]), tex_coords: texture_coords[3]}];
             let new_indicies = vec![0, 2, 1, 0, 2, 3];
         
-            self.add_part_vao(new_vertices, new_indicies);
+            self.add_part_vao(new_vertices, new_indicies)
         }
 
-        pub fn render_text(&mut self, start_ndc: (f32,f32), font_size: f32, color: Option<[f32;3]>,text: &mut RenderedText){
+        //Probably move this into the text.rs file
+        pub fn render_text(&mut self, color: Option<[f32;3]>,text: &mut RenderedText){
             if self.used_inds == 0{
                 self.indicies.invalidate();
             }
-            let mut current_pos = start_ndc;
+            let mut current_pos = text.screen_pos;
             text.index_start = self.used_inds as u16;
             text.vertex_start = self.used_vbo as u32;
             for char in text.text.chars(){
                 let char_as_num = char as u8;
                 if char_as_num == 10{
-                    current_pos = (start_ndc.0, current_pos.1 - font_size);
+                    current_pos = (text.screen_pos.0, current_pos.1 - text.font_size);
                     continue; 
                 }
                 let tex_coords = Renderer::char_to_uv(char as u8);
 
                 //println!("Tex coords for char {} is {:#?}", char, tex_coords);
-                self.draw_rectangle_with_specific_texture(current_pos, font_size/2.0, font_size, color, tex_coords);
-                current_pos = (current_pos.0 + font_size/2.0, current_pos.1);
+                self.draw_rectangle_with_specific_texture(current_pos, text.font_size/2.0,  text.font_size, color, tex_coords);
+                current_pos = (current_pos.0 + text.font_size/2.0, current_pos.1);
             }
             text.vertex_end = self.used_vbo as u32;
         }
 
+        //Probably move this into the text.rs file
         pub fn replace_text(&mut self, text: &RenderedText){
             let mut vert_start = text.vertex_start as usize;
             for char in text.text.chars(){
@@ -290,11 +293,13 @@ impl <'b>Renderer<'b>{
 
         }
 
-        pub fn remove_subset(&mut self, vertex_start: u32, index_start:u32){
-
+        pub fn remove_subset(&mut self, vertex_start: u32, index_start:u32, len:u32){
+            self.vbo.slice_mut(vertex_start as usize..(vertex_start+len) as usize).unwrap().invalidate();
+            self.indicies.slice_mut(index_start as usize..(index_start+len*3) as usize).unwrap().invalidate();
         }
         
         //Implement this...
+        //Probably move this into the text.rs file
         pub fn remove_text(&mut self, text: RenderedText){
 
         }
