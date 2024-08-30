@@ -7,7 +7,7 @@ use util::{input_handler::InputHandler, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
 use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface, VertexBuffer};
 use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
-use std::time::{Instant};
+use std::{os::windows::thread, thread::sleep, time::{Duration, Instant}};
 
 
 mod rendering;
@@ -19,6 +19,7 @@ mod util;
 mod player;
 mod world;
 mod units;
+mod UI;
 
 
 #[derive(Copy, Clone, Debug)]
@@ -41,7 +42,7 @@ fn _pointy_hex_corner(center: Point, size: usize, i: i32) -> Point {
 
 fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
     let event_loop = winit::event_loop::EventLoopBuilder::new().build().expect("event loop building"); 
-
+    
     event_loop.set_control_flow(ControlFlow::Poll);
     let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new().with_title("4X4D-WIP").build(&event_loop);
     
@@ -278,6 +279,7 @@ fn main() {
     let smoothing = 0.7; // larger=more smoothing
     let _ = event_loop.run(move |event, window_target| {
 
+              
         //println!("timer: {}", timer2.elapsed().as_millis());
 
         //Delta time calculation may be wrong...
@@ -443,7 +445,7 @@ fn main() {
                 //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera.camera_matrix.to_cols_array_2d(), u_light:light}));
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
                 //println!("\t\tUploading info to GPU took: {} ms", dur2.elapsed().as_millis());
-
+                //sleep(Duration::from_millis(14));
                 target.finish().unwrap();
                 //println!("\t\tTime for drawing frame: {} ms\n", dur2.elapsed().as_millis());
             },
@@ -460,7 +462,7 @@ fn main() {
         // Works for now but needs to be fixed...
         //println!("One frame took {} ms\n", now.elapsed().as_millis());
         frames = frames + 1.0;
-
+        timer = Instant::now();
     });
 }
 
