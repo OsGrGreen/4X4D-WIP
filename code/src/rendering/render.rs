@@ -269,12 +269,9 @@ impl <'b>Renderer<'b>{
 
         pub fn replace_text(&mut self, text: &RenderedText){
             let mut vert_start = text.vertex_start as usize;
+            //Add way to force it to be a specific length...
             for char in text.text.chars(){
-                if vert_start as u32 * 4 > text.vertex_end{
-                    //println!("After replacing text: {:#?}\n", self.indicies.read().unwrap());
 
-                    return;
-                }
                 let slice_for_char = self.vbo.slice_mut(vert_start..vert_start+4).unwrap();
                 let mut read_slice = slice_for_char.read().unwrap();
                 let tex_coords = Renderer::char_to_uv(char as u8);

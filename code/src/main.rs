@@ -51,7 +51,7 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
 
 //Camera constants
 
-const CAMERA_SPEED:f32 = 0.2;
+const CAMERA_SPEED:f32 = 2.0;
 
 const CONSTANT_FACTOR:f32 = 1.0;
 
@@ -267,7 +267,7 @@ fn main() {
 
     // Maybe try to have a double buffer of some kind..
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
-    let mut per_instance = glium::vertex::VertexBuffer::persistent(&display, &data).unwrap();
+    let mut per_instance = glium::vertex::VertexBuffer::dynamic(&display, &data).unwrap();
 
     draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
 
@@ -276,7 +276,7 @@ fn main() {
 
     let mut timer = Instant::now();
     let mut overall_fps = 0.0;
-    let smoothing = 0.7; // larger=more smoothing
+    let smoothing = 0.3; // larger=more smoothing
     let _ = event_loop.run(move |event, window_target| {
 
               
@@ -398,6 +398,7 @@ fn main() {
                 println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
+                //let mut dur2 = Instant::now();
 
                 let delta_time = timer.elapsed().as_secs_f32();
                 timer = Instant::now();
@@ -408,11 +409,12 @@ fn main() {
                 fps_text.change_text(fps_as_text);
                 text_renderer.replace_text(&fps_text);
                 //println!("Redraw requested");´
-
+                //println!("Time for updating fps counter {}", dur2.elapsed().as_secs_f32());
+                //dur2 = Instant::now();
                 update_game_logic(delta_time, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut per_instance, mouse_ndc, &mut mouse_pos, screen_size);
+                //println!("Time for updating game logic {}", dur2.elapsed().as_secs_f32());
+                //dur2 = Instant::now();
 
-
-                let dur2 = Instant::now();
                 //time += 0.02;
 
                 //let x_off = time.sin() * 0.5;
@@ -446,7 +448,10 @@ fn main() {
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
                 //println!("\t\tUploading info to GPU took: {} ms", dur2.elapsed().as_millis());
                 //sleep(Duration::from_millis(14));
+                //println!("Time for drawing {}", dur2.elapsed().as_secs_f32());
+                //dur2 = Instant::now();
                 target.finish().unwrap();
+                //println!("Time for rendering to screen {}", dur2.elapsed().as_secs_f32());
                 //println!("\t\tTime for drawing frame: {} ms\n", dur2.elapsed().as_millis());
             },
             _ => (),
@@ -462,7 +467,6 @@ fn main() {
         // Works for now but needs to be fixed...
         //println!("One frame took {} ms\n", now.elapsed().as_millis());
         frames = frames + 1.0;
-        timer = Instant::now();
     });
 }
 
@@ -470,7 +474,6 @@ fn main() {
 fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,per_instance:&mut VertexBuffer<Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32)){
     //Update movement (Kanske göra efter allt annat... possibly):
     let mut movement = input_handler.get_movement();
-    println!("{}", movement);
     if movement.length() > 0.0{
         let mut traveresed_whole_hex = false;
         movement = movement.normalize();
