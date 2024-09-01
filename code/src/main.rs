@@ -3,7 +3,8 @@ extern crate glium;
 extern crate winit;
 use rand::distr::{Distribution, Uniform};
 use glam::{Vec3};
-use util::{input_handler::InputHandler, ray_library::ndc_to_intersection};
+use units::unit_vertex_buffer::UnitVbo;
+use util::{input_handler::{self, InputHandler}, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
 use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface, VertexBuffer};
 use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
@@ -21,6 +22,8 @@ mod world;
 mod units;
 mod UI;
 
+const MAX_UNITS:usize = 100;
+
 
 #[derive(Copy, Clone, Debug)]
 struct Attr {
@@ -30,6 +33,15 @@ struct Attr {
 }
 implement_vertex!(Attr, world_position, colour, tex_offsets);
 
+impl Attr{
+    pub fn is_zero(&self) -> bool{
+        if self.colour == [0.0,0.0,0.0]{
+            return true
+        }else{
+            return false
+        }
+    }
+}
 
 fn _pointy_hex_corner(center: Point, size: usize, i: i32) -> Point {
     let angle_deg = 60.0 * i as f32 - 30.0;
@@ -54,9 +66,6 @@ fn init_window()-> (EventLoop<()>, Window, Display<WindowSurface>) {
 const CAMERA_SPEED:f32 = 2.0;
 
 const CONSTANT_FACTOR:f32 = 1.0;
-
-
-
 fn main() {
 
     //First value is what row, second value is what column
@@ -83,7 +92,6 @@ fn main() {
     // Furtherst camera can be: z = 4.85
 
     let mut camera = RenderCamera::new(Vec3::new(0.0,0.0,4.5), Vec3::new(0.0,0.0,0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0,0.0,-1.0));
-
 
     // Input handler
 
@@ -136,12 +144,18 @@ fn main() {
         ];
 
     let cup_verts = util::read_model("./models/hex.obj");
+
     let vert_shad = util::read_shader("./shaders/vert1.glsl");
     let vert_shad_2 = util::read_shader("./shaders/vert2.glsl");
+
     let frag_shad_1 = util::read_shader("./shaders/frag1.glsl");
     let frag_shad_2 = util::read_shader("./shaders/frag2.glsl");
+
     let line_vert_shader = util::read_shader("./shaders/line_vert.glsl");
     let line_frag_shader = util::read_shader("./shaders/line_frag.glsl");
+
+    let unit_vert_shader = util::read_shader("./shaders/unit_vert.glsl");
+    let unit_frag_shader = util::read_shader("./shaders/unit_frag.glsl");
 
     // Setup specific parameters
 
@@ -162,13 +176,14 @@ fn main() {
     };
 
     //Read textures
+        //Tile textures
     let tile_texture_atlas_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\texture_atlas_tiles.png")),
                         image::ImageFormat::Png).unwrap().to_rgba8();
     let image_dimensions = tile_texture_atlas_image.dimensions();
     let tile_texture_atlas_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&tile_texture_atlas_image.into_raw(), image_dimensions);
     let tile_texture_atlas = glium::texture::Texture2d::new(&display, tile_texture_atlas_image).unwrap();
     
-
+        //Font textures
             // Font chars are of size 12 x 6
     let font_raw_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\standard_font.png")),
     image::ImageFormat::Png).unwrap().to_rgba8();
@@ -176,29 +191,49 @@ fn main() {
     let font_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&font_raw_image.into_raw(), font_dimensions);
     let font_atlas = glium::texture::Texture2d::new(&display, font_image).unwrap();
 
+        //Unit textures
+    let unit_raw_image = image::load(std::io::Cursor::new(&include_bytes!(r"textures\unit_atlas.png")), image::ImageFormat::Png).unwrap().to_rgba8();
+    let unit_dimensions = unit_raw_image.dimensions();
+    let unit_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&unit_raw_image.into_raw(), unit_dimensions);
+    let unit_atlas = glium::texture::Texture2d::new(&display, unit_image).unwrap();
+    
+
+    //Shape of quad
+    let quad_shape:Vec<Vertex> = vec![
+        Vertex{position: [-1.0*hex_size, -1.0*hex_size, 0.0], normal: [0.0,0.0,0.0], tex_coords: [0.0, 0.0]}, 
+        Vertex{position: [1.0*hex_size, -1.0*hex_size, 0.0], normal: [0.0,0.0,0.0], tex_coords: [1.0, 0.0]},
+        Vertex{position: [1.0*hex_size, 1.0*hex_size, 0.0], normal: [0.0,0.0,0.0], tex_coords: [1.0, 1.0]},
+        Vertex{position: [-1.0*hex_size, 1.0*hex_size, 0.0], normal: [0.0,0.0,0.0], tex_coords: [0.0, 1.0]}
+        ];
+    
+    let quad_indicies = vec![0, 2, 1, 0, 2, 3];
+
     //Setup render programs
     let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display, None).unwrap();
     let _trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display, None).unwrap();
+    
+    let mut unit_renderer = rendering::render::Renderer::new(quad_shape, quad_indicies, Some(glium::index::PrimitiveType::TrianglesList), &unit_vert_shader, &unit_frag_shader, None, &display, Some(
+        glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::DepthTest::IfMoreOrEqual,
+                write: true,
+                .. Default::default()
+            },
+            blend: glium::Blend::alpha_blending(),
+            //polygon_mode: glium::draw_parameters::PolygonMode::Line,
+            line_width: Some(5.0),
+            point_size: Some(4.0),
+                .. Default::default()
+        })).unwrap();
+    
     let mut line_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::LinesList), &line_vert_shader, &line_frag_shader, None, &display, Some(line_params)).unwrap();
     let mut ui_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, None).unwrap();
     let mut text_renderer = rendering::render::Renderer::new_empty_dynamic(256, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, Some(text_params)).unwrap();
-   
+    
     
     let mut fps_text = RenderedText::new(String::from("00000fps"));
     text_renderer.render_text((0.85,0.95), 0.035,Some([1.0,0.5,1.0]),&mut fps_text);
-
-    /*text_renderer.render_text((-0.5,0.5), 0.1,Some([1.0,0.3,1.0]),&mut hello_world_text_2);
-    println!("Text is: {:#?}", hello_world_text);
-    hello_world_text.change_text("Gijjo Oskar???");
-    println!("Text is: {:#?}", hello_world_text);
-    text_renderer.replace_text(hello_world_text);
-    */
     
-    // Add some stuff to the renderers
-
-    //ui_renderer.draw_rectangle_with_texture((0.0, 0.0), 0.2, 0.2, None, 0);
-
-
     // Uniform setup
         // Text uniforms
     let text_behavior = glium::uniforms::SamplerBehavior {
@@ -227,7 +262,7 @@ fn main() {
     let top:i32 = -((needed_hexes_x));
     let right:i32 = left.abs();
     let bottom:i32 = top.abs();
-    let screen_size = (bottom*2,right*2);
+    let mut screen_size = (bottom*2,right*2);
     println!("Screen size {:#?}", screen_size);
     //Börjar med att köra en column i taget.
     for q in top..=bottom{
@@ -267,9 +302,18 @@ fn main() {
 
     // Maybe try to have a double buffer of some kind..
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
-    let mut per_instance = glium::vertex::VertexBuffer::dynamic(&display, &data).unwrap();
+    let mut hex_tiles: VertexBuffer<Attr> = glium::vertex::VertexBuffer::dynamic(&display, &data).unwrap();
+    let mut unit_Vbo =  UnitVbo::new(MAX_UNITS, &display);
+    let mut unit_data: Vec<Attr> = vec![];
+    unit_data.push(Attr{
+        world_position: [0.0, 0.0, 0.0],
+        colour: [0.0,1.0, 0.0],
+        tex_offsets: [0.0,0.0,0.125],
+    });
 
-    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+    unit_Vbo.add_units(unit_data);
+
+    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
 
     let mut mouse_pos: Point = Point{x:0.0,y:0.0};
     let mut mouse_ndc: Vec3 = Vec3::ZERO;
@@ -284,13 +328,6 @@ fn main() {
     let mut overall_fps = 0.0;
     let smoothing = 0.3; // larger=more smoothing
     let _ = event_loop.run(move |event, window_target| {
-              
-        //println!("timer: {}", timer2.elapsed().as_millis());
-
-        //Delta time calculation may be wrong...
-        //There is kinda of stuttery movement...
-        //Could also be movement calculations...
-
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
             winit::event::WindowEvent::CloseRequested => window_target.exit(),
@@ -349,7 +386,7 @@ fn main() {
                     // Do not do the update here (add it to the job queue)
                     let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
                     world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
-                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
                     println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
 
                     //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
@@ -375,19 +412,19 @@ fn main() {
                     //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&camera.perspective)*camera.camera_matrix*Mat4::IDENTITY));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
                     world_camera.move_camera(0, 1);
-                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyH && event.state.is_pressed(){
                     world_camera.move_camera(2, 0);
-                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyJ && event.state.is_pressed(){
                     world_camera.move_camera(0, -1);
-                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyK && event.state.is_pressed(){
                     world_camera.move_camera(-2, 0);
-                    draw_functions::update_hex_map_colors(&mut per_instance, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
                 }
                 //Handle WASD
 
@@ -403,7 +440,6 @@ fn main() {
                 println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
-
                 //Physics step
                 /*
                 let new_time = Instant::now();
@@ -443,13 +479,11 @@ fn main() {
                 update_game_logic(delta_time, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut per_instance, mouse_ndc, &mut mouse_pos, screen_size); 
 
 
-
                 //println!("Redraw requested");´
                 //println!("Time for updating fps counter {}", dur2.elapsed().as_secs_f32());
                 //dur2 = Instant::now();
                 //println!("Time for updating game logic {}", dur2.elapsed().as_secs_f32());
                 //dur2 = Instant::now();
-
                 //time += 0.02;
 
                 //let x_off = time.sin() * 0.5;
@@ -457,8 +491,9 @@ fn main() {
                 let mut target = display.draw();
 
                 target.clear_color_and_depth((0.1, 0.4, 0.2, 1.0), 1.0);
+                
                 target.draw(
-                    (&hex_renderer.vbo, per_instance.per_instance().unwrap()),
+                    (&hex_renderer.vbo, hex_tiles.per_instance().unwrap()),
                     &hex_renderer.indicies,
                     // For different hexes make a texture atlas so a specific tile has a texture in the atlas
                     // Then each instance have different UV coords! 
@@ -476,6 +511,7 @@ fn main() {
                         .. Default::default()
                     },
                 ).unwrap();
+                target.draw((&unit_renderer.vbo,unit_Vbo.vbo.per_instance().unwrap()), &unit_renderer.indicies, &unit_renderer.program, &uniform! { model: hex_size_mat, projection: perspective.to_cols_array_2d(), view:camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&unit_atlas, text_behavior)}, &unit_renderer.draw_params).unwrap();
                 target.draw(&line_renderer.vbo, &line_renderer.indicies, &line_renderer.program, &uniform! {}, &line_renderer.draw_params).unwrap();
                 target.draw(&ui_renderer.vbo, &ui_renderer.indicies, &ui_renderer.program, &uniform! {tex:&font_atlas}, &Default::default()).unwrap();
                 target.draw(&text_renderer.vbo, &text_renderer.indicies, &text_renderer.program, &uniform! {tex:glium::uniforms::Sampler(&font_atlas, text_behavior)}, &text_renderer.draw_params).unwrap();
@@ -542,7 +578,7 @@ fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &m
             //Gör så kameran bara uppdateras när man faktiskt rör på sig...
             if traveresed_whole_hex{
                 let update_hex_map_timer = Instant::now();
-                draw_functions::update_hex_map_colors(per_instance, world_vec, world_camera.offsets(),screen_size);
+                draw_functions::update_hex_map_colors(hex_tiles, world_vec, world_camera.offsets(),screen_size);
                 //println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
             }
             let intersect = ndc_to_intersection(&mouse_ndc,&camera.camera_matrix,camera.get_pos(),&camera.perspective);
