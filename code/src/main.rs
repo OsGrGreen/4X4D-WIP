@@ -32,6 +32,15 @@ struct Attr {
 }
 implement_vertex!(Attr, world_position, colour, tex_offsets);
 
+impl Attr{
+    pub fn is_zero(&self) -> bool{
+        if self.colour == [0.0,0.0,0.0]{
+            return true
+        }else{
+            return false
+        }
+    }
+}
 
 fn _pointy_hex_corner(center: Point, size: usize, i: i32) -> Point {
     let angle_deg = 60.0 * i as f32 - 30.0;
