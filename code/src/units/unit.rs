@@ -63,4 +63,13 @@ impl Unit{
         }
     }
 
+    pub fn type_to_texture_ids(unit_type: &UnitType) -> [f32;3]{
+        match unit_type{
+            UnitType::worker => [0.0,0.0,0.125],
+            UnitType::warrior => [0.125,0.0,0.125],
+            UnitType::archer => [0.25,0.0,0.125],
+            _ => [0.375,0.0,0.125],
+        }
+    }
+
 }

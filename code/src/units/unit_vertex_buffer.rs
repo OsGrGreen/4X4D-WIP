@@ -47,4 +47,16 @@ impl UnitVbo{
             }
         }
     }
+
+    pub fn animate_unit(&mut self){
+        let write_slice = self.vbo.slice_mut(0..self.end as usize).unwrap();
+        let mut read_slice:Vec<Attr> = write_slice.read().unwrap();
+        for id in 0..self.end as usize{
+            read_slice[id].tex_offsets[0] += 0.125;
+            if read_slice[id].tex_offsets[0] >= 1.0{
+                read_slice[id].tex_offsets[0] = 0.0;
+            }
+        }
+        write_slice.write(&read_slice);
+    }
 }

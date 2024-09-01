@@ -220,9 +220,6 @@ fn main() {
                 .. Default::default()
             },
             blend: glium::Blend::alpha_blending(),
-            //polygon_mode: glium::draw_parameters::PolygonMode::Line,
-            line_width: Some(5.0),
-            point_size: Some(4.0),
                 .. Default::default()
         })).unwrap();
     
@@ -303,7 +300,7 @@ fn main() {
     // Maybe try to have a double buffer of some kind..
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
     let mut hex_tiles: VertexBuffer<Attr> = glium::vertex::VertexBuffer::dynamic(&display, &data).unwrap();
-    let mut unit_Vbo =  UnitVbo::new(MAX_UNITS, &display);
+    let mut unit_vbo =  UnitVbo::new(MAX_UNITS, &display);
     let mut unit_data: Vec<Attr> = vec![];
     unit_data.push(Attr{
         world_position: [0.0, 0.0, 0.0],
@@ -311,7 +308,7 @@ fn main() {
         tex_offsets: [0.0,0.0,0.125],
     });
 
-    unit_Vbo.add_units(unit_data);
+    unit_vbo.add_units(unit_data);
 
     draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
 
@@ -319,7 +316,7 @@ fn main() {
     let mut mouse_ndc: Vec3 = Vec3::ZERO;
 
     let mut t: f32 = 0.0;
-    let mut dt: f32 = 0.01;
+    let mut dt: f32 = 0.0167;
 
     let mut current_time = Instant::now();
     let mut accumulator: f32 = 0.0;
@@ -402,12 +399,12 @@ fn main() {
                     window_target.exit()
                 } 
                 else if event.physical_key == keyboard::KeyCode::KeyQ && event.state.is_pressed(){
-                    camera.r#move(50.0*-CAMERA_SPEED*camera.get_front());
+                    camera.r#move(-CAMERA_SPEED*camera.get_front());
                     camera.camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                     //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&camera.perspective)*camera.camera_matrix*Mat4::IDENTITY));
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyE{
-                    camera.r#move(50.0*CAMERA_SPEED*camera.get_front());
+                    camera.r#move(CAMERA_SPEED*camera.get_front());
                     camera.camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                     //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&camera.perspective)*camera.camera_matrix*Mat4::IDENTITY));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
@@ -441,7 +438,7 @@ fn main() {
             },
             winit::event::WindowEvent::RedrawRequested => {
                 //Physics step
-                /*
+                
                 let new_time = Instant::now();
                 let mut frame_time = current_time.elapsed().as_secs_f32() - new_time.elapsed().as_secs_f32();
 
@@ -456,11 +453,13 @@ fn main() {
                 //Looks more stuttery, which I do not like
                 //If we had some way to compare and interpolate states it would probably be fine but alas.
                 while accumulator >= dt {
-                    update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut per_instance, mouse_ndc, &mut mouse_pos, screen_size); 
+                    //update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size); 
+                    update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size); 
+                    unit_vbo.animate_unit();
                     t += dt;
                     accumulator -= dt;
                 }
-                */
+                
 
                 //Render step
 
@@ -475,9 +474,8 @@ fn main() {
                 let fps_as_text = format_to_exact_length(overall_fps as u32, 5) + "fps";
                 fps_text.change_text(fps_as_text);
                 text_renderer.replace_text(&fps_text);
-
-                update_game_logic(delta_time, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut per_instance, mouse_ndc, &mut mouse_pos, screen_size); 
-
+               
+                
 
                 //println!("Redraw requested");´
                 //println!("Time for updating fps counter {}", dur2.elapsed().as_secs_f32());
@@ -511,8 +509,11 @@ fn main() {
                         .. Default::default()
                     },
                 ).unwrap();
-                target.draw((&unit_renderer.vbo,unit_Vbo.vbo.per_instance().unwrap()), &unit_renderer.indicies, &unit_renderer.program, &uniform! { model: hex_size_mat, projection: perspective.to_cols_array_2d(), view:camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&unit_atlas, text_behavior)}, &unit_renderer.draw_params).unwrap();
+
+                target.draw((&unit_renderer.vbo,unit_vbo.vbo.per_instance().unwrap()), &unit_renderer.indicies, &unit_renderer.program, &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&unit_atlas, text_behavior)}, &unit_renderer.draw_params).unwrap();
+                
                 target.draw(&line_renderer.vbo, &line_renderer.indicies, &line_renderer.program, &uniform! {}, &line_renderer.draw_params).unwrap();
+                
                 target.draw(&ui_renderer.vbo, &ui_renderer.indicies, &ui_renderer.program, &uniform! {tex:&font_atlas}, &Default::default()).unwrap();
                 target.draw(&text_renderer.vbo, &text_renderer.indicies, &text_renderer.program, &uniform! {tex:glium::uniforms::Sampler(&font_atlas, text_behavior)}, &text_renderer.draw_params).unwrap();
                 //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera.camera_matrix.to_cols_array_2d(), u_light:light}));
@@ -542,7 +543,7 @@ fn main() {
 }
 
 
-fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,per_instance:&mut VertexBuffer<Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32)){
+fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,hex_tiles:&mut VertexBuffer<Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32)){
     //Update movement (Kanske göra efter allt annat... possibly):
     let mut movement = input_handler.get_movement();
     if movement.length() > 0.0{
