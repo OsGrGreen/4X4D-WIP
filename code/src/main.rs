@@ -274,11 +274,16 @@ fn main() {
     let mut mouse_pos: Point = Point{x:0.0,y:0.0};
     let mut mouse_ndc: Vec3 = Vec3::ZERO;
 
+    let mut t: f32 = 0.0;
+    let mut dt: f32 = 0.01;
+
+    let mut current_time = Instant::now();
+    let mut accumulator: f32 = 0.0;
+
     let mut timer = Instant::now();
     let mut overall_fps = 0.0;
     let smoothing = 0.3; // larger=more smoothing
     let _ = event_loop.run(move |event, window_target| {
-
               
         //println!("timer: {}", timer2.elapsed().as_millis());
 
@@ -398,7 +403,33 @@ fn main() {
                 println!("Scale factors are: {} and {}", width_scale, height_scale);
             },
             winit::event::WindowEvent::RedrawRequested => {
-                //let mut dur2 = Instant::now();
+
+                //Physics step
+                /*
+                let new_time = Instant::now();
+                let mut frame_time = current_time.elapsed().as_secs_f32() - new_time.elapsed().as_secs_f32();
+
+                if frame_time > 0.25{
+                    frame_time = 0.25;
+                }
+                current_time = new_time;
+
+                accumulator += frame_time;
+
+
+                //Looks more stuttery, which I do not like
+                //If we had some way to compare and interpolate states it would probably be fine but alas.
+                while accumulator >= dt {
+                    update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut per_instance, mouse_ndc, &mut mouse_pos, screen_size); 
+                    t += dt;
+                    accumulator -= dt;
+                }
+                */
+
+                //Render step
+
+                //Linear interpolation between states, cant really do it but yeah...
+                //State state = currentState * alpha +  previousState * ( 1.0 - alpha );
 
                 let delta_time = timer.elapsed().as_secs_f32();
                 timer = Instant::now();
@@ -408,10 +439,14 @@ fn main() {
                 let fps_as_text = format_to_exact_length(overall_fps as u32, 5) + "fps";
                 fps_text.change_text(fps_as_text);
                 text_renderer.replace_text(&fps_text);
+
+                update_game_logic(delta_time, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut per_instance, mouse_ndc, &mut mouse_pos, screen_size); 
+
+
+
                 //println!("Redraw requested");´
                 //println!("Time for updating fps counter {}", dur2.elapsed().as_secs_f32());
                 //dur2 = Instant::now();
-                update_game_logic(delta_time, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut per_instance, mouse_ndc, &mut mouse_pos, screen_size);
                 //println!("Time for updating game logic {}", dur2.elapsed().as_secs_f32());
                 //dur2 = Instant::now();
 
