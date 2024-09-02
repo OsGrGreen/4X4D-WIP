@@ -133,7 +133,19 @@ Cities can be created in the first phase of the game, but not in the second.
 
 ### Buildings
 
-## Units
+## Entities
+
+An entity can:
+- Move
+- Attack
+- Take damage
+- Special action
+- Get buffed
+- Get debuffed
+
+### Units
+
+### Cities
 
 ## Leaders
 
