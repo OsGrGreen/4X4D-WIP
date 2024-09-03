@@ -139,6 +139,10 @@ Trading is a core mechanic in the game, since each city will not have enough res
 
 Trading is done by actual convoys (see [[Sid Meiers colonization]]) and can be intercepted. Furthermore, you want your convoys to take the shortest route possible between cities, however this can be hard with the emergence of the void, possibly blocking off important routes.
 
+Anything and everything can be traded, this includes pops and resources. 
+
+However, there is a risk in trading since other players can plunder the convoy stealing the resources it was carrying. 
+
 ## Entities
 
 An entity can:
