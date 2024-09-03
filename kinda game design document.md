@@ -133,6 +133,12 @@ Cities can be created in the first phase of the game, but not in the second.
 
 ### Buildings
 
+## Trading
+
+Trading is a core mechanic in the game, since each city will not have enough resources to fully sustain themselves. Furthermore, trading is also necessary to move resources around to make for example rituals possible.
+
+Trading is done by actual convoys (see [[Sid Meiers colonization]]) and can be intercepted. Furthermore, you want your convoys to take the shortest route possible between cities, however this can be hard with the emergence of the void, possibly blocking off important routes.
+
 ## Entities
 
 An entity can:
