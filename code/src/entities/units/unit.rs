@@ -1,29 +1,27 @@
+use crate::entities::entity_base::BaseEntity;
+
 pub enum UnitType {
     worker,
     warrior,
     archer,
 }
 
-pub struct Unit{
-    unit_type: UnitType,
-    health: i32,
-    power: u32,
-    attack_range: u16,
-    movement: u16,
-    max_movement: u16,
-    player_id: u32,
+//TODO Implement specific types of units
+
+pub struct BaseUnit{
+    unit_type: UnitType, //Is this needed (?), yes could be nice.
     pub render_id: u32,
-    cube_posistion: (u32,u32)
+    entity: BaseEntity,
 }
 
-impl Unit{
-    pub fn new(unit_type: UnitType, extra_health: i32, extra_power: i32, extra_range: i16, extra_movement: i16, player_id: u32, pos: (u32, u32)) -> Unit{
+impl BaseUnit{
+    pub fn new(unit_type: UnitType, extra_health: i32, extra_power: i32, extra_range: i16, extra_movement: i16, player_id: u8, pos: (u32, u32)) -> BaseUnit{
         let health = Self::type_to_health(&unit_type) + extra_health;
         let power = Self::type_to_power(&unit_type) + extra_power;
         let range = Self::type_to_range(&unit_type) + extra_range;
         let movement = Self::type_to_movement(&unit_type) + extra_movement;
 
-        Unit { unit_type: unit_type, health: health, power: power as u32, attack_range: range as u16, movement: movement as u16, max_movement: movement as u16, player_id: player_id, render_id: 0, cube_posistion: pos}
+        BaseUnit { unit_type: unit_type,  render_id: 0,entity: BaseEntity::new(player_id, health, power as u32, range as u16, movement as u16, pos)}
 
     }
 

@@ -1,26 +1,28 @@
 #[macro_use]
 extern crate glium;
 extern crate winit;
+use entities::{entity_base::BaseEntity, improvements, units, EntityMap};
+use improvements::{city::City, resource::Resource};
 use rand::distr::{Distribution, Uniform};
 use glam::{Vec3};
-use units::unit_vertex_buffer::UnitVbo;
+use units::{unit::BaseUnit, unit_vertex_buffer::UnitVbo};
 use util::{input_handler::{self, InputHandler}, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
 use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface, VertexBuffer};
 use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
-use std::{os::windows::thread, thread::sleep, time::{Duration, Instant}};
+use std::{collections::HashMap, mem, os::windows::thread, thread::sleep, time::{Duration, Instant}};
 
 
 mod rendering;
 use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera, text::{format_to_exact_length, RenderedText}};
 
 
-mod improvements;
 mod util;
 mod player;
 mod world;
-mod units;
 mod UI;
+
+mod entities;
 
 const MAX_UNITS:usize = 100;
 
@@ -68,10 +70,23 @@ const CAMERA_SPEED:f32 = 2.0;
 const CONSTANT_FACTOR:f32 = 1.0;
 fn main() {
 
+    /*println!("Base Entity: {:?} bytes",mem::size_of::<BaseEntity>());
+    println!("Unit: {:?} bytes",mem::size_of::<BaseUnit>());
+    println!("City: {:?} bytes",mem::size_of::<City>());
+    println!("UnitVBO: {:?} bytes",mem::size_of::<UnitVbo>());
+    println!("Resource: {:?} bytes",mem::size_of::<Resource>());
+
+
+
+    if true{return}*/
+
     //First value is what row, second value is what column
     // 0,0 is bottom left corner
+
+    let mut entity_map = EntityMap::new();
+
     let mut world_vec: Vec<Vec<Tile>> = vec![vec![]];
-    let mut rng = rand::thread_rng();
+    let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
     let die = Uniform::new_inclusive(0, 5).unwrap();
     for i in 0..NUM_COLMS{
         for _ in 0..NUM_ROWS{
@@ -262,6 +277,8 @@ fn main() {
     let mut screen_size = (bottom*2,right*2);
     println!("Screen size {:#?}", screen_size);
     //Börjar med att köra en column i taget.
+    let mut unit_data: Vec<Attr> = vec![];
+
     for q in top..=bottom{
         let q_offset = q>>1;
         for r in left-q_offset..=right-q_offset{
@@ -286,8 +303,6 @@ fn main() {
         }
     }
 
-
-
     println!("Layout size is: {:#?}", layout.size);
     println!("Expected layout size is {}w, {}h",layout.get_width(),layout.get_height());
     println!("data length is: {}", data.len());
@@ -301,7 +316,6 @@ fn main() {
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
     let mut hex_tiles: VertexBuffer<Attr> = glium::vertex::VertexBuffer::dynamic(&display, &data).unwrap();
     let mut unit_vbo =  UnitVbo::new(MAX_UNITS, &display);
-    let mut unit_data: Vec<Attr> = vec![];
     unit_data.push(Attr{
         world_position: [0.0, 0.0, 0.0],
         colour: [0.0,1.0, 0.0],
@@ -309,8 +323,7 @@ fn main() {
     });
 
     unit_vbo.add_units(unit_data);
-
-    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
+    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
 
     let mut mouse_pos: Point = Point{x:0.0,y:0.0};
     let mut mouse_ndc: Vec3 = Vec3::ZERO;
@@ -321,13 +334,18 @@ fn main() {
     let mut current_time = Instant::now();
     let mut accumulator: f32 = 0.0;
 
+    let mut total_fps: usize = 0;
+
     let mut timer = Instant::now();
     let mut overall_fps = 0.0;
     let smoothing = 0.3; // larger=more smoothing
     let _ = event_loop.run(move |event, window_target| {
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
-            winit::event::WindowEvent::CloseRequested => window_target.exit(),
+            winit::event::WindowEvent::CloseRequested => {
+                println!("Average fps was: {}", total_fps/frames as usize);
+                window_target.exit()
+            },
             winit::event::WindowEvent::CursorMoved { device_id: _, position } => {
                 
 
@@ -383,7 +401,7 @@ fn main() {
                     // Do not do the update here (add it to the job queue)
                     let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
                     world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
                     println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
 
                     //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
@@ -396,6 +414,7 @@ fn main() {
 
                 //Handle other inputs
                 if event.physical_key == keyboard::KeyCode::Escape && event.state.is_pressed(){
+                    println!("Average fps was: {}", total_fps/frames as usize);
                     window_target.exit()
                 } 
                 else if event.physical_key == keyboard::KeyCode::KeyQ && event.state.is_pressed(){
@@ -409,19 +428,19 @@ fn main() {
                     //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&camera.perspective)*camera.camera_matrix*Mat4::IDENTITY));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
                     world_camera.move_camera(0, 1);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyH && event.state.is_pressed(){
                     world_camera.move_camera(2, 0);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyJ && event.state.is_pressed(){
                     world_camera.move_camera(0, -1);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyK && event.state.is_pressed(){
                     world_camera.move_camera(-2, 0);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
                 }
                 //Handle WASD
 
@@ -448,35 +467,37 @@ fn main() {
                 current_time = new_time;
 
                 accumulator += frame_time;
-
-
                 //Looks more stuttery, which I do not like
                 //If we had some way to compare and interpolate states it would probably be fine but alas.
+                // Could interpolate camera posistion (as long as there hasn't been a jump, is still possible but will be a little bit harder)?
+                println!("Before physics: {} ms",current_time.elapsed().as_millis());
                 while accumulator >= dt {
+                    println!("!");
                     //update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size); 
-                    update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size); 
-                    unit_vbo.animate_unit();
+                    let time_update = Instant::now();
+                    update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size, &entity_map, &mut unit_vbo); 
+                    println!("Update game: {} ms", time_update.elapsed().as_millis());
                     t += dt;
                     accumulator -= dt;
                 }
                 
 
                 //Render step
-
+                let time_update = Instant::now();
+                println!("Before fps-counter: {} ms",current_time.elapsed().as_millis());
                 //Linear interpolation between states, cant really do it but yeah...
                 //State state = currentState * alpha +  previousState * ( 1.0 - alpha );
-
                 let delta_time = timer.elapsed().as_secs_f32();
                 timer = Instant::now();
-                // Get fps
+                // Get fps 
+                    //This has to be done faster (is very slow now...)
                 let current = 1.0 / delta_time;
                 overall_fps = ((overall_fps * smoothing) + (current * (1.0-smoothing))).min(50_000.0);
+                total_fps += overall_fps as usize;
                 let fps_as_text = format_to_exact_length(overall_fps as u32, 5) + "fps";
                 fps_text.change_text(fps_as_text);
-                text_renderer.replace_text(&fps_text);
-               
+                text_renderer.replace_text(&fps_text);                
                 
-
                 //println!("Redraw requested");´
                 //println!("Time for updating fps counter {}", dur2.elapsed().as_secs_f32());
                 //dur2 = Instant::now();
@@ -485,11 +506,12 @@ fn main() {
                 //time += 0.02;
 
                 //let x_off = time.sin() * 0.5;
-
+                println!("Before clearing: {} ms",current_time.elapsed().as_millis());
                 let mut target = display.draw();
 
                 target.clear_color_and_depth((0.1, 0.4, 0.2, 1.0), 1.0);
-                
+                println!("Before drawing: {} ms",current_time.elapsed().as_millis());
+
                 target.draw(
                     (&hex_renderer.vbo, hex_tiles.per_instance().unwrap()),
                     &hex_renderer.indicies,
@@ -516,13 +538,17 @@ fn main() {
                 
                 target.draw(&ui_renderer.vbo, &ui_renderer.indicies, &ui_renderer.program, &uniform! {tex:&font_atlas}, &Default::default()).unwrap();
                 target.draw(&text_renderer.vbo, &text_renderer.indicies, &text_renderer.program, &uniform! {tex:glium::uniforms::Sampler(&font_atlas, text_behavior)}, &text_renderer.draw_params).unwrap();
+                
                 //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera.camera_matrix.to_cols_array_2d(), u_light:light}));
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
                 //println!("\t\tUploading info to GPU took: {} ms", dur2.elapsed().as_millis());
                 //sleep(Duration::from_millis(14));
                 //println!("Time for drawing {}", dur2.elapsed().as_secs_f32());
                 //dur2 = Instant::now();
+                println!("Before finishing: {} ms",current_time.elapsed().as_millis());
                 target.finish().unwrap();
+                println!("In total: {} ms\n",current_time.elapsed().as_millis());
+                frames = frames + 1.0;
                 //println!("Time for rendering to screen {}", dur2.elapsed().as_secs_f32());
                 //println!("\t\tTime for drawing frame: {} ms\n", dur2.elapsed().as_millis());
             },
@@ -538,12 +564,11 @@ fn main() {
         // Can get stuck in infinite screen or something
         // Works for now but needs to be fixed...
         //println!("One frame took {} ms\n", now.elapsed().as_millis());
-        frames = frames + 1.0;
     });
 }
 
 
-fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,hex_tiles:&mut VertexBuffer<Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32)){
+fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,hex_tiles:&mut VertexBuffer<Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32), entity_map: &EntityMap, unit_vbo: &mut UnitVbo){
     //Update movement (Kanske göra efter allt annat... possibly):
     let mut movement = input_handler.get_movement();
     if movement.length() > 0.0{
@@ -579,7 +604,7 @@ fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &m
             //Gör så kameran bara uppdateras när man faktiskt rör på sig...
             if traveresed_whole_hex{
                 let update_hex_map_timer = Instant::now();
-                draw_functions::update_hex_map_colors(hex_tiles, world_vec, world_camera.offsets(),screen_size);
+                draw_functions::update_hex_map_colors(hex_tiles, world_vec,entity_map, unit_vbo, world_camera.offsets(),screen_size);
                 //println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
             }
             let intersect = ndc_to_intersection(&mouse_ndc,&camera.camera_matrix,camera.get_pos(),&camera.perspective);

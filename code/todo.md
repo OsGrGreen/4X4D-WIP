@@ -45,7 +45,7 @@ I think this should minimize the amount of memory needed.
 - [x] Fix rendering bugs
 - [ ] Add units
     - [ ] Have some clever way to know when to render units
-    - [ ] Make code for automatically adding units to be rendered
+    - [x] Make code for automatically adding units to be rendered
     - [ ] Add unit logic
         - [ ] Selection
         - [ ] Movement (and range)

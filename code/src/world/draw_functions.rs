@@ -1,5 +1,5 @@
 
-use crate::{rendering::render::Renderer, Attr};
+use crate::{entities::{self, units::unit_vertex_buffer::UnitVbo, EntityMap}, rendering::render::Renderer, Attr};
 
 use super::{tile::Tile, NUM_COLMS, NUM_ROWS};
 
@@ -49,40 +49,32 @@ pub const BIOME_TO_TEXTURE: [[f32;3];8] = [
 
  
 
-//Make this slightly more efficient...
-pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tiles: &Vec<Vec<Tile>>, start_tile: (isize,isize), size_screen: (i32,i32)) {
+// Make this slightly more efficient...
+// By for example knowing the camera z-posistion and not updating tiles that are not in view...
+// Updating like I do in "unit_vertex_buffer" does not seem to be more efficient, however change is minimal..
+
+
+// Should also take a hashmap of all units
+pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tiles: &Vec<Vec<Tile>>, entities: &EntityMap, unitVBO:&mut UnitVbo,start_tile: (isize,isize), size_screen: (i32,i32)) {
     
     //let timer = Instant::now();
 
     //println!("Start tile is: {:#?}", start_tile);
-    let vertex_copy = vertex_buffer.read().unwrap();
-    let mut mapping = vertex_buffer.map_write();
+    let vertex_copy_hex = vertex_buffer.read().unwrap();
+    let mut mapping_hex = vertex_buffer.map_write();
+    let mut vertex_copy_unit = unitVBO.vbo.read().unwrap();
+    let mut mapping_unit = unitVBO.vbo.map_write();
     let start_row = ((start_tile.0) + NUM_ROWS as isize) as usize % NUM_ROWS;
     let start_column = ((start_tile.1) + NUM_COLMS as isize) as usize % NUM_COLMS;
     let mut row_pos = start_row;
     let mut column_pos = start_column;
+    
 
     //println!("Start row is: {}", row_pos);
     //println!("Start column is: {}", column_pos);
     let mut traveresd_hexes = 0;
-    for (i, hex) in vertex_copy.iter().enumerate() {
+    for (i, hex) in vertex_copy_hex.iter().enumerate() {
         let current_tile = tiles[column_pos][row_pos];
-        //println!("Taking tile from coordinate {}, {}", column_pos, row_pos);
-        column_pos += 1;
-        if column_pos >= NUM_COLMS{
-            column_pos = 0;
-        }
-
-        // Width is 90 hexes
-        if traveresd_hexes >= size_screen.1{
-            column_pos = start_column;
-            row_pos += 1;
-            if row_pos >= NUM_ROWS{
-                row_pos = 0;
-            }
-            traveresd_hexes = -1;
-        }
-        traveresd_hexes += 1;
 
         let mut final_colour = current_tile.get_biome_colour();
 
@@ -95,13 +87,38 @@ pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tile
                 *c -= 0.4;
             }
         }
+        let unit_pos = (column_pos as u32,row_pos as u32);
+        if current_tile.get_occupied() == 1 && entities.entities.contains_key(&unit_pos){
+            let mut tex_coords = entities.entities.get(&unit_pos).unwrap().get_texture();
+            UnitVbo::animate_unit(&mut tex_coords);
+            vertex_copy_unit[i].tex_offsets = tex_coords;
+            
+            mapping_unit.set(i, vertex_copy_unit[i]);
+        }
         
         
-        mapping.set(i,Attr {
+        mapping_hex.set(i,Attr {
             world_position: hex.world_position,
             colour: final_colour,
             tex_offsets: BIOME_TO_TEXTURE[current_tile.get_biome() as usize],
         });
+
+        //println!("Taking tile from coordinate {}, {}", column_pos, row_pos);
+        column_pos += 1;
+        if column_pos >= NUM_COLMS{
+            column_pos = 0;
+        }
+        
+        // Width is 90 hexes
+        if traveresd_hexes >= size_screen.1{
+            column_pos = start_column;
+            row_pos += 1;
+            if row_pos >= NUM_ROWS{
+                row_pos = 0;
+            }
+            traveresd_hexes = -1;
+        }
+        traveresd_hexes += 1;
     }
     //println!("Time elapsed for updating screen is: {} ms", timer.elapsed().as_millis());
 }
