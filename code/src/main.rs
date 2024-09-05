@@ -14,7 +14,7 @@ use std::{collections::HashMap, mem, os::windows::thread, thread::sleep, time::{
 
 
 mod rendering;
-use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera, text::{format_to_exact_length, RenderedText}};
+use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera, text::{format_to_exact_length, RenderedText, TextVbo}};
 
 
 mod util;
@@ -172,6 +172,9 @@ fn main() {
     let unit_vert_shader = util::read_shader("./shaders/unit_vert.glsl");
     let unit_frag_shader = util::read_shader("./shaders/unit_frag.glsl");
 
+    let text_vert_shader  = util::read_shader("./shaders/text_vert.glsl");
+    let text_frag_shader  = util::read_shader("./shaders/text_frag.glsl");
+
     // Setup specific parameters
 
     let line_params = glium::DrawParameters {
@@ -224,10 +227,10 @@ fn main() {
     let quad_indicies = vec![0, 2, 1, 0, 2, 3];
 
     //Setup render programs
-    let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display, None).unwrap();
-    let _trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display, None).unwrap();
+    let hex_renderer = rendering::render::Renderer::new(&hex_vert_2, &hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display, None).unwrap();
+    let _trig_renderers = rendering::render::Renderer::new(&cup_verts, &vec![], None, &vert_shad_2, &frag_shad_2, None, &display, None).unwrap();
     
-    let mut unit_renderer = rendering::render::Renderer::new(quad_shape, quad_indicies, Some(glium::index::PrimitiveType::TrianglesList), &unit_vert_shader, &unit_frag_shader, None, &display, Some(
+    let mut unit_renderer = rendering::render::Renderer::new(&quad_shape, &quad_indicies, Some(glium::index::PrimitiveType::TrianglesList), &unit_vert_shader, &unit_frag_shader, None, &display, Some(
         glium::DrawParameters {
             depth: glium::Depth {
                 test: glium::DepthTest::IfMoreOrEqual,
@@ -240,12 +243,12 @@ fn main() {
     
     let mut line_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::LinesList), &line_vert_shader, &line_frag_shader, None, &display, Some(line_params)).unwrap();
     let mut ui_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, None).unwrap();
-    let mut text_renderer = rendering::render::Renderer::new_empty_dynamic(256, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, Some(text_params)).unwrap();
+    let mut text_renderer = rendering::render::Renderer::new(&quad_shape, &quad_indicies, Some(glium::index::PrimitiveType::TrianglesList), &text_vert_shader, &text_frag_shader, None, &display, Some(text_params)).unwrap();
     
     
     let mut fps_text = RenderedText::new(String::from("00000fps"));
-    text_renderer.render_text((0.85,0.95), 0.035,Some([1.0,0.5,1.0]),&mut fps_text);
-    
+    let mut text_vbo = TextVbo::new(100, &display);
+    text_vbo.add_text((0.78,0.95), 0.085, Some([1.0,0.5,1.0]), &mut fps_text);
     // Uniform setup
         // Text uniforms
     let text_behavior = glium::uniforms::SamplerBehavior {
@@ -496,7 +499,9 @@ fn main() {
                 total_fps += overall_fps as usize;
                 let fps_as_text = format_to_exact_length(overall_fps as u32, 5) + "fps";
                 fps_text.change_text(fps_as_text);
-                text_renderer.replace_text(&fps_text);                
+
+                //It is this that takes the majority of the time
+                text_vbo.replace_text(&fps_text);           
                 
                 //println!("Redraw requested");´
                 //println!("Time for updating fps counter {}", dur2.elapsed().as_secs_f32());
@@ -537,7 +542,7 @@ fn main() {
                 target.draw(&line_renderer.vbo, &line_renderer.indicies, &line_renderer.program, &uniform! {}, &line_renderer.draw_params).unwrap();
                 
                 target.draw(&ui_renderer.vbo, &ui_renderer.indicies, &ui_renderer.program, &uniform! {tex:&font_atlas}, &Default::default()).unwrap();
-                target.draw(&text_renderer.vbo, &text_renderer.indicies, &text_renderer.program, &uniform! {tex:glium::uniforms::Sampler(&font_atlas, text_behavior)}, &text_renderer.draw_params).unwrap();
+                target.draw((&text_renderer.vbo, text_vbo.vbo.per_instance().unwrap()), &text_renderer.indicies, &text_renderer.program, &uniform! {tex:glium::uniforms::Sampler(&font_atlas, text_behavior)}, &text_renderer.draw_params).unwrap();
                 
                 //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera.camera_matrix.to_cols_array_2d(), u_light:light}));
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
