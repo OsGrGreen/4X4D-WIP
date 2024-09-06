@@ -1,4 +1,4 @@
-use crate::entities::entity_base::BaseEntity;
+use crate::entities::{entity_base::BaseEntity, Entity};
 
 pub enum UnitType {
     worker,
@@ -10,18 +10,17 @@ pub enum UnitType {
 
 pub struct BaseUnit{
     unit_type: UnitType, //Is this needed (?), yes could be nice.
-    pub render_id: u32,
     entity: BaseEntity,
 }
 
 impl BaseUnit{
-    pub fn new(unit_type: UnitType, extra_health: i32, extra_power: i32, extra_range: i16, extra_movement: i16, player_id: u8, pos: (u32, u32)) -> BaseUnit{
+    pub fn new(unit_type: UnitType, render_id: u32,extra_health: i32, extra_power: i32, extra_range: i16, extra_movement: i16, player_id: u8, pos: (u32, u32)) -> BaseUnit{
         let health = Self::type_to_health(&unit_type) + extra_health;
         let power = Self::type_to_power(&unit_type) + extra_power;
         let range = Self::type_to_range(&unit_type) + extra_range;
         let movement = Self::type_to_movement(&unit_type) + extra_movement;
 
-        BaseUnit { unit_type: unit_type,  render_id: 0,entity: BaseEntity::new(player_id, health, power as u32, range as u16, movement as u16, pos)}
+        BaseUnit { unit_type: unit_type, entity: BaseEntity::new(player_id, render_id,health, power as u32, range as u16, movement as u16, pos)}
 
     }
 
@@ -64,10 +63,39 @@ impl BaseUnit{
     pub fn type_to_texture_ids(unit_type: &UnitType) -> [f32;3]{
         match unit_type{
             UnitType::worker => [0.0,0.0,0.125],
-            UnitType::warrior => [0.125,0.0,0.125],
+            UnitType::warrior => [0.0,0.125,0.125],
             UnitType::archer => [0.25,0.0,0.125],
             _ => [0.375,0.0,0.125],
         }
     }
+}
 
+impl Entity for BaseUnit{
+    fn attack(&mut self) -> u16 {
+        todo!()
+    }
+
+    fn damage(&mut self, dmg: u16) -> bool {
+        todo!()
+    }
+
+    fn movement(&mut self, target_pos: (u32,u32)) -> () {
+        todo!()
+    }
+
+    fn destroy(&mut self) -> () {
+        todo!()
+    }
+
+    fn buff(&mut self) -> () {
+        todo!()
+    }
+
+    fn get_texture(&self) -> ([f32;3]) {
+        BaseUnit::type_to_texture_ids(&self.unit_type)
+    }
+    
+    fn get_render_id(&self) -> usize {
+        self.entity.render_id as usize
+    }
 }

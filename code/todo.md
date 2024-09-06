@@ -44,7 +44,7 @@ I think this should minimize the amount of memory needed.
     - [ ] Decide what kind of multi-thread model to use
 - [x] Fix rendering bugs
 - [ ] Add units
-    - [ ] Have some clever way to know when to render units
+    - [ ] Have some clever way to know when to render units (kinda finished)
     - [x] Make code for automatically adding units to be rendered
     - [ ] Add unit logic
         - [ ] Selection
@@ -52,6 +52,8 @@ I think this should minimize the amount of memory needed.
         - [ ] Attacking
         - [ ] Knowing which units are beside you
     - [ ] Add creation of units (player input)
+- [ ] World generation
+- [ ] Create a game struct that you modify each frame/turn
 - [ ] Update input logic and so on
 - [ ] Make logic for building cities and buildings in cities
 - [ ] Make player able to have land
@@ -59,6 +61,7 @@ I think this should minimize the amount of memory needed.
     -  [ ] Settings
 - [ ] Make loading screens maybe?
 - [ ] Move out constants (like texture atlas and so on) into seperate files for easy modification...
+- [ ] AI
  
 
 

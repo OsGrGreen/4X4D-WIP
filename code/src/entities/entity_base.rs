@@ -1,7 +1,8 @@
 use super::Entity;
 
 pub struct BaseEntity{
-    player_id: u8,
+    pub player_id: u8,
+    pub render_id: u32,
     health: i32,
     power: u32,
     attack_range: u16,
@@ -11,9 +12,10 @@ pub struct BaseEntity{
 }
 
 impl BaseEntity{
-    pub fn new(player_id: u8, health: i32, power:u32,attack_range: u16, movement: u16, axial_pos: (u32,u32)) -> BaseEntity{
+    pub fn new(player_id: u8, render_id: u32,health: i32, power:u32,attack_range: u16, movement: u16, axial_pos: (u32,u32)) -> BaseEntity{
         BaseEntity{
             player_id: player_id,
+            render_id: render_id,
             health: health,
             power: power,
             attack_range: attack_range,
@@ -21,31 +23,5 @@ impl BaseEntity{
             max_movement: movement,
             axial_pos: axial_pos,
         }
-    }
-}
-
-impl Entity for BaseEntity{
-    fn attack(&mut self) -> u16 {
-        todo!()
-    }
-
-    fn damage(&mut self, dmg: u16) -> bool {
-        todo!()
-    }
-
-    fn movement(&mut self, target_pos: (u32,u32)) -> () {
-        todo!()
-    }
-
-    fn destroy(&mut self) -> () {
-        todo!()
-    }
-
-    fn buff(&mut self) {
-        todo!()
-    }
-    
-    fn get_texture(&self) -> ([f32;3]) {
-        todo!()
     }
 }
