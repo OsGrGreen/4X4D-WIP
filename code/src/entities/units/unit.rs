@@ -1,5 +1,6 @@
 use crate::entities::{entity_base::BaseEntity, Entity};
 
+#[derive(Copy, Clone, Debug)]
 pub enum UnitType {
     worker,
     warrior,
@@ -68,6 +69,11 @@ impl BaseUnit{
             _ => [0.375,0.0,0.125],
         }
     }
+
+    pub fn get_type(&self) -> UnitType{
+       self.unit_type 
+    }
+
 }
 
 impl Entity for BaseUnit{
@@ -79,8 +85,9 @@ impl Entity for BaseUnit{
         todo!()
     }
 
+    //Maybe check if movement is legal here...
     fn movement(&mut self, target_pos: (u32,u32)) -> () {
-        todo!()
+        self.entity.set_pos(target_pos);
     }
 
     fn destroy(&mut self) -> () {
@@ -105,5 +112,16 @@ impl Entity for BaseUnit{
 
     fn get_movement(&self) -> u16{
         self.entity.get_movement()
+    }
+    
+    fn clone(&self) -> Box<dyn Entity> {
+        return Box::new(BaseUnit{
+            unit_type: self.get_type(),
+            entity: self.get_entity()
+        })
+    }
+    
+    fn get_entity(&self) -> BaseEntity {
+        self.entity
     }
 }

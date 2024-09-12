@@ -393,7 +393,7 @@ fn main() {
                         // qoffset_from_cube(EVEN,&clicked_hex);  
                         let neighbors = Hex::neighbors_in_range_offset(unit.get_pos(), 2);
                         for neighbor in neighbors{
-                            world_vec[neighbor.0 as usize][neighbor.1 as usize].set_occupied(1);
+                            world_vec[neighbor.0 as usize][neighbor.1 as usize].set_improved(1);
                         }
                     }
                     //let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
@@ -404,7 +404,10 @@ fn main() {
 
                     //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
                 }else{
-
+                    let (clicked_x, clicked_y) = get_clicked_pos(&layout, &mut mouse_pos, &mut world_camera);
+                    entity_handler.move_unit((clicked_x,clicked_y), &mut world_vec);
+                    println!("{:#?}", entity_handler.entity_map.entities);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
             }
 
@@ -525,7 +528,7 @@ fn main() {
                     // For different hexes make a texture atlas so a specific tile has a texture in the atlas
                     // Then each instance have different UV coords! 
                     &hex_renderer.program,
-                    &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: &tile_texture_atlas},
+                    &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&tile_texture_atlas, text_behavior)},
                     &glium::DrawParameters {
                         depth: glium::Depth {
                             test: glium::DepthTest::IfLess,
@@ -652,5 +655,5 @@ pub fn get_clicked_pos(layout: &HexLayout, mouse_pos: &mut Point, world_camera: 
         clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
     }  
 
-    return (clicked_x as u32, clicked_y as u32)
+    return (clicked_y as u32, clicked_x as u32)
 }

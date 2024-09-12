@@ -1,5 +1,6 @@
 use super::Entity;
 
+#[derive(Copy, Clone, Debug)]
 pub struct BaseEntity{
     pub player_id: u8,
     pub render_id: u32,
@@ -31,6 +32,10 @@ impl BaseEntity{
 
     pub fn get_movement(&self) -> u16{
         self.movement
+    }
+
+    pub fn set_pos(&mut self, target_pos: (u32,u32)) -> (){
+        self.offset_pos = target_pos;
     }
 
 }

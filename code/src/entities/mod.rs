@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use entity_base::BaseEntity;
 use glium::{glutin::surface::WindowSurface, Display};
 use entity_vertex_buffer::EntityVBO;
 use units::unit::{BaseUnit, UnitType};
@@ -40,6 +41,40 @@ impl EntityHandler{
         }
     }
 
+    pub fn move_unit(&mut self, target_pos: (u32,u32), world:&mut Vec<Vec<Tile>>) -> bool{
+        match self.selected_entity{
+            Some(pos) => {
+                let ents = &mut self.entity_map.entities;
+                let selected_unit = ents.get_mut(&pos).unwrap();
+                if world[target_pos.0 as usize][target_pos.1 as usize].get_occupied() == 0{
+                    // Remove the unit from the current tile
+                    world[pos.0 as usize][pos.1 as usize].set_occupied(0);
+
+                    // Make new tile occupied
+                    world[target_pos.0 as usize][target_pos.1 as usize].set_occupied(1);
+
+                    // Update unit
+                    selected_unit.movement(target_pos);
+                    let unit_clone = selected_unit.clone();
+
+                    // Remove old pos from map
+                    ents.remove(&pos);
+
+                    // Add new pos to map
+                    ents.insert(target_pos, unit_clone);
+
+                }else{
+                    //Make it attack that fucker instead...
+                    println!("Is occupied");
+                    return false;
+                }
+                self.selected_entity = None;
+                return true;
+            }
+            _ => return false,
+        }
+    }
+
     pub fn select(&mut self, pos: (u32,u32)){
         if self.entity_map.entities.contains_key(&pos){
             self.selected_entity = Some(pos);
@@ -51,7 +86,6 @@ impl EntityHandler{
     }
 }
 
-
 pub trait Entity{
     fn attack(&mut self) -> u16;
     fn damage(&mut self, dmg: u16) -> bool;
@@ -62,7 +96,10 @@ pub trait Entity{
     fn get_render_id(&self) -> usize;
     fn get_pos(&self) -> (u32,u32);
     fn get_movement(&self) -> u16;
+    fn clone(&self) -> Box<dyn Entity>;
+    fn get_entity(&self) -> BaseEntity;
 }
+
 
 use core::fmt::Debug;
 impl Debug for dyn Entity {

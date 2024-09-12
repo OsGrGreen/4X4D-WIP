@@ -67,16 +67,17 @@ pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tile
     let change_units = entity_handler.entity_vbo.vbo.slice_mut(0..entity_handler.entity_vbo.end as usize).unwrap();
 
     let mut write_vec:Vec<EntityPosAttr> = vec![NONE_POS_ATTR;change_units.len()];
-
     let start_row = ((start_tile.0) + NUM_ROWS as isize) as usize % NUM_ROWS;
     let start_column = ((start_tile.1) + NUM_COLMS as isize) as usize % NUM_COLMS;
     let mut row_pos = start_row;
     let mut column_pos = start_column;
+
+
     //println!("Start row is: {}", row_pos);
     //println!("Start column is: {}", column_pos);
     let mut traveresd_hexes = 0;
     for (i, hex) in vertex_copy_hex.iter().enumerate() {
-        //println!("hex nr: {}, has world_vec pos: {}, {}", i, column_pos, row_pos);
+        //println!("hex nr: {}, has world_vec pos: {}, {}", i, row_pos, column_pos);
         let current_tile = tiles[row_pos][column_pos];
 
         let mut final_colour = current_tile.get_biome_colour();
