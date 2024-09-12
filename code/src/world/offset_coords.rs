@@ -10,34 +10,41 @@ use super::hex::Hex;
 pub fn qoffset_from_cube(offset: i32, h:&Hex) -> (isize,isize){
     assert!(offset == EVEN || offset == ODD);
     let col = h.get_q() as isize;
-    let row = h.get_r() as isize + ((h.get_q() + offset*(h.get_q() & 1)) as f32 / 2.0) as isize;
-    return (col, row);
+    let row: i32 = (h.get_r() + (h.get_q() + offset * (h.get_q() & 1)) / 2 as i32);
+    return (col, row as isize);
 }
 
 /**
  * For flat rotation
  */
-pub fn qoffset_to_cube(offset: i32, col: isize, row: isize) -> (isize,isize){
+pub fn qoffset_to_cube(offset: i32, tile: (u32,u32)) -> Hex{
+    let col = tile.0 as i32;
+    let row = tile.1 as i32;
     assert!(offset == EVEN || offset == ODD);
-    let q = col as isize;
-    let r = row as isize - ((col as isize + (offset as f32* ((col & 1) as f32 / 2.0)) as isize)) as isize;
-    (q, r)
+    let q = col;
+    let r: i32 = (row - (col + offset * (col & 1)) / 2 as i32);
+    let s = -q-r;
+    Hex::new(q, r, s)
 }
 
 
-/**
- * For pointy rotation
- */
-pub fn roffset_from_cube(offset: i32, h:&Hex) -> (isize,isize){
-    assert!(offset == EVEN || offset == ODD);
-    let col = h.get_q() as isize + ((h.get_r() + offset*(h.get_r() & 1)) as f32 / 2.0) as isize;
-    let row = h.get_r() as isize;
-    return (col, row);
+pub fn roffset_from_cube(offset: i32, h: Hex) -> (u32,u32) {
+    let mut col: i32 = h.get_q() + (h.get_r() + offset * (h.get_r() & 1)) / 2 as i32;
+    let mut row: i32 = h.get_r();
+    if offset != EVEN && offset != ODD {
+        panic!("offset must be EVEN (+1) or ODD (-1)");
+    }
+    return (col as u32,row as u32);
 }
 
-/**
- * For pointy rotation
- */
-pub fn roffset_to_cube(offset: i32, h:&Hex) -> (u32,u32){
-    (0,0)
-}
+/*pub fn roffset_to_cube(offset: i32, h: (u32,u32)) -> Hex {
+    let col = h.0;
+    let row = h.1;
+    let mut q: i32 = h.col - (h.row + offset * (h.row & 1)) / 2 as i32;
+    let mut r: i32 = h.row;
+    let mut s: i32 = -q - r;
+    if offset != EVEN && offset != ODD {
+        panic!("offset must be EVEN (+1) or ODD (-1)");
+    }
+    return Hex { q: q, r: r, s: s };
+}*/

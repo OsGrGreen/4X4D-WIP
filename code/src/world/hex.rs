@@ -1,4 +1,8 @@
-use std::ops;
+use std::{cmp::{max, min}, ops};
+
+use crate::world::layout::ODD;
+
+use super::{layout::EVEN, offset_coords::{qoffset_from_cube, qoffset_to_cube}};
 
 
 #[derive(Copy, Clone,Debug)]
@@ -48,6 +52,47 @@ impl Hex{
     pub fn hex_neighbor(&self, direction:usize)->Hex{
         return self+&Hex::hex_direction(direction)
     }
+
+    pub fn neighbors_in_range(center: Hex, n: u16) -> Vec<Hex>{
+        let range: i32 = n as i32;
+        let mut results:Vec<Hex> = vec![];
+
+        for q in -range..=range{
+            for r in max(-range,-q-range)..=min(range,-q+range){
+                let s = -q - r;
+                results.push(center+Hex::new(q, r, s));
+            }
+        }
+
+        return results;
+    }
+
+    pub fn neighbors_in_range_offset(center: (u32,u32), n: u16) -> Vec<(u32,u32)>{
+        let center_hex = qoffset_to_cube(EVEN, center);
+        let range: i32 = n as i32;
+        let mut results:Vec<(u32,u32)> = vec![];
+        for q in -range..range+1{
+            //println!("Q: {}", q);
+            let r1 = (-range).max(-q - range);
+            let r2 = range.min(-q + range);
+            for r in r1..r2+1{
+                //println!("R: {}", r);
+                let s = -q - r;
+                let to_push = center_hex+Hex::new(q, r, s);
+                // This becomes wrong for some reason
+                // Since the offset goes the wrong way or something weird as fuck my dude.
+
+
+                // Qoffset from cube ger kanske inte direkt utifrån vår vector...
+                let tile = qoffset_from_cube(EVEN, &to_push);
+
+                results.push((tile.0 as u32, tile.1 as u32));
+            }
+        }
+
+        return results;
+    }
+
 }
 
 

@@ -45,7 +45,7 @@ pub struct Renderer<'b>
 }
 
 impl <'b>Renderer<'b>{
-        pub fn new<'a>(shape: Vec<Vertex>, inds: Vec<u16>, prim_type: Option<glium::index::PrimitiveType> ,vert_shader: &'a str, frag_shader: &'a str, geo_shader: Option<&'a str>, disp: &Display<WindowSurface>, params: Option<DrawParameters<'b>>) -> Result<Renderer<'b>, &'a str>{
+        pub fn new<'a>(shape: &Vec<Vertex>, inds: &Vec<u16>, prim_type: Option<glium::index::PrimitiveType> ,vert_shader: &'a str, frag_shader: &'a str, geo_shader: Option<&'a str>, disp: &Display<WindowSurface>, params: Option<DrawParameters<'b>>) -> Result<Renderer<'b>, &'a str>{
             let shape_len = shape.len();
 
             let vbo = glium::VertexBuffer::new(disp, &shape).unwrap();
@@ -245,49 +245,6 @@ impl <'b>Renderer<'b>{
             self.add_part_vao(new_vertices, new_indicies);
         }
 
-        pub fn render_text(&mut self, start_ndc: (f32,f32), font_size: f32, color: Option<[f32;3]>,text: &mut RenderedText){
-            if self.used_inds == 0{
-                self.indicies.invalidate();
-            }
-            let mut current_pos = start_ndc;
-            text.index_start = self.used_inds as u16;
-            text.vertex_start = self.used_vbo as u32;
-            for char in text.text.chars(){
-                let char_as_num = char as u8;
-                if char_as_num == 10{
-                    current_pos = (start_ndc.0, current_pos.1 - font_size);
-                    continue; 
-                }
-                let tex_coords = Renderer::char_to_uv(char as u8);
-
-                //println!("Tex coords for char {} is {:#?}", char, tex_coords);
-                self.draw_rectangle_with_specific_texture(current_pos, font_size/2.0, font_size, color, tex_coords);
-                current_pos = (current_pos.0 + font_size/2.0, current_pos.1);
-            }
-            println!("End of text: {}", self.used_vbo);
-            text.vertex_end = self.used_vbo as u32;
-        }
-
-        pub fn replace_text(&mut self, text: &RenderedText){
-            let mut vert_start = text.vertex_start as usize;
-            for char in text.text.chars(){
-                if vert_start+4 > text.vertex_end as usize{
-                    return;
-                }
-                let slice_for_char = self.vbo.slice_mut(vert_start..vert_start+4).unwrap();
-                let mut read_slice = slice_for_char.read().unwrap();
-                let tex_coords = Renderer::char_to_uv(char as u8);
-                //Maybe make this into a loop
-                read_slice[0].tex_coords = tex_coords[0];
-                read_slice[1].tex_coords = tex_coords[1];
-                read_slice[2].tex_coords = tex_coords[2];
-                read_slice[3].tex_coords = tex_coords[3];
-                slice_for_char.write(&read_slice);
-                vert_start += 4;
-            }
-            //println!("After replacing text: {:#?}\n", self.indicies.read().unwrap());
-        }
-
         pub fn remove_subset(&mut self, vertex_start: u32, index_start:u32){
 
         }
@@ -295,13 +252,6 @@ impl <'b>Renderer<'b>{
         //Implement this...
         pub fn remove_text(&mut self, text: RenderedText){
 
-        }
-
-        fn char_to_uv(char_as_num: u8) -> [[f32;2];4]{
-            let bottom_left_tex = CHAR_TO_TEX[char_as_num as usize];
-            //First one is bottom left, second one is bottom right, top right, top left
-            let tex_coords: [[f32;2];4] = [bottom_left_tex, [bottom_left_tex[0]+0.0625, bottom_left_tex[1]], [bottom_left_tex[0]+0.0625, bottom_left_tex[1]+0.125], [bottom_left_tex[0], bottom_left_tex[1]+0.125]];
-            return tex_coords;
         }
 }  
 

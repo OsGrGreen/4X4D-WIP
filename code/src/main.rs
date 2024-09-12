@@ -1,20 +1,20 @@
 #[macro_use]
 extern crate glium;
 extern crate winit;
-use entities::{entity_base::BaseEntity, improvements, units, EntityMap};
+use entities::{entity_vertex_buffer::{EntityPosAttr, EntityVBO}, improvements, units::{self, unit::UnitType}, EntityHandler, EntityMap};
 use improvements::{city::City, resource::Resource};
 use rand::distr::{Distribution, Uniform};
 use glam::{Vec3};
-use units::{unit::BaseUnit, unit_vertex_buffer::UnitVbo};
+use units::unit::BaseUnit;
 use util::{input_handler::{self, InputHandler}, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
 use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface, VertexBuffer};
-use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
-use std::{collections::HashMap, mem, os::windows::thread, thread::sleep, time::{Duration, Instant}};
+use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::{qoffset_from_cube, qoffset_to_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
+use std::{any::Any, collections::HashMap, mem, os::windows::thread, thread::sleep, time::{Duration, Instant}};
 
 
 mod rendering;
-use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera, text::{format_to_exact_length, RenderedText}};
+use rendering::{render::{self, array_to_vbo, Vertex}, render_camera::RenderCamera, text::{format_to_exact_length, RenderedText, TextVbo}};
 
 
 mod util;
@@ -28,7 +28,7 @@ const MAX_UNITS:usize = 100;
 
 
 #[derive(Copy, Clone, Debug)]
-struct Attr {
+pub struct Attr {
     world_position: [f32; 3],
     colour: [f32; 3], // Changed to array
     tex_offsets: [f32;3], //x offset, y offset, scaling factor          For reading in texture atlas
@@ -83,7 +83,6 @@ fn main() {
     //First value is what row, second value is what column
     // 0,0 is bottom left corner
 
-    let mut entity_map = EntityMap::new();
 
     let mut world_vec: Vec<Vec<Tile>> = vec![vec![]];
     let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
@@ -99,9 +98,13 @@ fn main() {
 
 
     println!("world vec length is {:#?} x {:#?}", world_vec.len(), world_vec[0].len());
-    world_vec[12][25].set_biome(6);
-    world_vec[13][25].improve();
-    world_vec[12][26].improve();
+    //world_vec[12][25].set_biome(6);
+    world_vec[0][0].set_biome(6);
+    //world_vec[10][0].set_biome(6);
+    //world_vec[13][25].improve();
+    //world_vec[12][26].improve();
+
+    
 
     // Closest camera can be: z = 2.15
     // Furtherst camera can be: z = 4.85
@@ -172,6 +175,9 @@ fn main() {
     let unit_vert_shader = util::read_shader("./shaders/unit_vert.glsl");
     let unit_frag_shader = util::read_shader("./shaders/unit_frag.glsl");
 
+    let text_vert_shader  = util::read_shader("./shaders/text_vert.glsl");
+    let text_frag_shader  = util::read_shader("./shaders/text_frag.glsl");
+
     // Setup specific parameters
 
     let line_params = glium::DrawParameters {
@@ -224,10 +230,10 @@ fn main() {
     let quad_indicies = vec![0, 2, 1, 0, 2, 3];
 
     //Setup render programs
-    let hex_renderer = rendering::render::Renderer::new(hex_vert_2, hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display, None).unwrap();
-    let _trig_renderer = rendering::render::Renderer::new(cup_verts, vec![], None, &vert_shad_2, &frag_shad_2, None, &display, None).unwrap();
+    let hex_renderer = rendering::render::Renderer::new(&hex_vert_2, &hex_indecies_fan.to_vec(), Some(glium::index::PrimitiveType::TriangleFan), &vert_shad, &frag_shad_1, None, &display, None).unwrap();
+    let _trig_renderers = rendering::render::Renderer::new(&cup_verts, &vec![], None, &vert_shad_2, &frag_shad_2, None, &display, None).unwrap();
     
-    let mut unit_renderer = rendering::render::Renderer::new(quad_shape, quad_indicies, Some(glium::index::PrimitiveType::TrianglesList), &unit_vert_shader, &unit_frag_shader, None, &display, Some(
+    let mut unit_renderer = rendering::render::Renderer::new(&quad_shape, &quad_indicies, Some(glium::index::PrimitiveType::TrianglesList), &unit_vert_shader, &unit_frag_shader, None, &display, Some(
         glium::DrawParameters {
             depth: glium::Depth {
                 test: glium::DepthTest::IfMoreOrEqual,
@@ -240,15 +246,12 @@ fn main() {
     
     let mut line_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::LinesList), &line_vert_shader, &line_frag_shader, None, &display, Some(line_params)).unwrap();
     let mut ui_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, None).unwrap();
-    
-    //Make the text_renderer also renderer instances of the same quad.
-    // Should in theory be faster, atleast less data needs to be changed and transferred between GPU and CPU.
-    let mut text_renderer = rendering::render::Renderer::new_empty_dynamic(256, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, Some(text_params)).unwrap();
+    let mut text_renderer = rendering::render::Renderer::new(&quad_shape, &quad_indicies, Some(glium::index::PrimitiveType::TrianglesList), &text_vert_shader, &text_frag_shader, None, &display, Some(text_params)).unwrap();
     
     
     let mut fps_text = RenderedText::new(String::from("00000fps"));
-    text_renderer.render_text((0.85,0.95), 0.035,Some([1.0,0.5,1.0]),&mut fps_text);
-    
+    let mut text_vbo = TextVbo::new(100, &display);
+    text_vbo.add_text((0.78,0.95), 0.085, Some([1.0,0.5,1.0]), &mut fps_text);
     // Uniform setup
         // Text uniforms
     let text_behavior = glium::uniforms::SamplerBehavior {
@@ -273,18 +276,30 @@ fn main() {
 
     // Not the most efficient or pretty way but it works..
     let mut data: Vec<Attr> = vec![];
-    let left:i32 = -needed_hexes_y/2;
-    let top:i32 = -((needed_hexes_x));
+    let left:i32 = -needed_hexes_y/2; //Is possible to multiply by 2, I think that will be nicer.. //However have to make draw_function faster
+    let top:i32 = -((needed_hexes_x)); //Is possible to multiply by 2
     let right:i32 = left.abs();
     let bottom:i32 = top.abs();
     let mut screen_size = (bottom*2,right*2);
     println!("Screen size {:#?}", screen_size);
     //Börjar med att köra en column i taget.
-    let mut unit_data: Vec<Attr> = vec![];
-
+    let mut unit_data: Vec<EntityPosAttr> = vec![];
+    
     for q in top..=bottom{
         let q_offset = q>>1;
         for r in left-q_offset..=right-q_offset{
+
+            let test_hex = Hex::new(q,r,-q-r);
+            let convert = qoffset_from_cube(EVEN, &test_hex);
+            let convert_convert: (u32,u32) = (convert.0 as u32, convert.1 as u32);
+            let converted_hex = qoffset_to_cube(EVEN, convert_convert);
+
+            assert!(test_hex.get_q() == converted_hex.get_q());
+            assert!(test_hex.get_r() == converted_hex.get_r());
+
+            println!("{:?} == {:?}", test_hex, converted_hex);
+
+
             let coords = layout.hex_to_pixel(&Hex::new(q, r, -q-r));
 
             let color_choose = (((q-r) % 3) + 3) % 3;
@@ -310,7 +325,10 @@ fn main() {
     println!("Expected layout size is {}w, {}h",layout.get_width(),layout.get_height());
     println!("data length is: {}", data.len());
     //println!("data is: {:#?}", data);
-
+    let mut entity_handler: EntityHandler = EntityHandler::new(100, &display);
+    entity_handler.create_unit(&mut world_vec, (26,13), UnitType::worker, 0,0,0,0,0);
+    entity_handler.select((26,13));
+    world_vec[26][13].set_biome(7);
     
     //println!("{:#?}", data[0]);
     println!("Amount of true hexes are: {:#?}", amount_of_hexes);
@@ -318,15 +336,9 @@ fn main() {
     // Maybe try to have a double buffer of some kind..
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
     let mut hex_tiles: VertexBuffer<Attr> = glium::vertex::VertexBuffer::dynamic(&display, &data).unwrap();
-    let mut unit_vbo =  UnitVbo::new(MAX_UNITS, &display);
-    unit_data.push(Attr{
-        world_position: [0.0, 0.0, 0.0],
-        colour: [0.0,1.0, 0.0],
-        tex_offsets: [0.0,0.0,0.125],
-    });
 
-    unit_vbo.add_units(unit_data);
-    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
+
+    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
 
     let mut mouse_pos: Point = Point{x:0.0,y:0.0};
     let mut mouse_ndc: Vec3 = Vec3::ZERO;
@@ -341,7 +353,7 @@ fn main() {
 
     let mut timer = Instant::now();
     let mut overall_fps = 0.0;
-    let smoothing = 0.3; // larger=more smoothing
+    let smoothing = 0.6; // larger=more smoothing
     let _ = event_loop.run(move |event, window_target| {
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
@@ -371,43 +383,28 @@ fn main() {
             winit::event::WindowEvent::MouseInput { device_id: _, state, button } =>{
                 if state.is_pressed(){
 
-                    //println!("Dimension is: {:#?}", window.inner_size());
-                    let frac_hex = layout.pixel_to_hex(&mouse_pos);
-                    let clicked_hex = frac_hex.hex_round();
-                    
-                    let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);                    
-                    
-                    //Make these not hard coded...
-                    // And move out into seperate function
-                    clicked_y = 25 - clicked_y as isize;
-                    clicked_x = 12 - clicked_x as isize;
-    
-                    let camera_offsets = world_camera.offsets();
-    
-                    //Make these then loop when crossing over the boundary.
-                    clicked_x += camera_offsets.1; 
-                    clicked_y += camera_offsets.0;
-
-                    if clicked_x <= 0{
-                        clicked_x = ((NUM_COLMS) as isize + clicked_x) % NUM_COLMS as isize;
-                    }else if clicked_x >= NUM_COLMS as isize{
-                        clicked_x = (clicked_x - (NUM_COLMS) as isize) % NUM_COLMS as isize;
-                    }  
-                    
-
-                    if clicked_y <= 0{
-                        clicked_y = ((NUM_ROWS) as isize + clicked_y) % NUM_ROWS as isize;
-                    }else if clicked_y >= NUM_ROWS as isize{
-                        clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
-                    }  
+                    let (clicked_x, clicked_y) = get_clicked_pos(&layout, &mut mouse_pos, &mut world_camera);
 
                     // Do not do the update here (add it to the job queue)
-                    let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
-                    world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
-                    println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
+                    entity_handler.select((clicked_x,clicked_y));
+                    if entity_handler.get_selected_unit().is_some(){
+                        let unit = entity_handler.get_selected_unit().unwrap();
+                        println!("Clicked pos is: {:#?}, and unit pos is: {:#?}", (clicked_x, clicked_y), unit.get_pos());
+                        // qoffset_from_cube(EVEN,&clicked_hex);  
+                        let neighbors = Hex::neighbors_in_range_offset(unit.get_pos(), 2);
+                        for neighbor in neighbors{
+                            world_vec[neighbor.0 as usize][neighbor.1 as usize].set_occupied(1);
+                        }
+                    }
+                    //let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
+                    println!("Clicked tile was: {:?}, {:?}", qoffset_to_cube(EVEN, (clicked_x as u32, clicked_y as u32)), (clicked_x, clicked_y));
+                    //world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
+                    //println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
 
                     //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
+                }else{
+
                 }
             }
 
@@ -431,19 +428,19 @@ fn main() {
                     //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&camera.perspective)*camera.camera_matrix*Mat4::IDENTITY));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
                     world_camera.move_camera(0, 1);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyH && event.state.is_pressed(){
                     world_camera.move_camera(2, 0);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyJ && event.state.is_pressed(){
                     world_camera.move_camera(0, -1);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyK && event.state.is_pressed(){
                     world_camera.move_camera(-2, 0);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&entity_map, &mut unit_vbo, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
                 //Handle WASD
 
@@ -473,21 +470,26 @@ fn main() {
                 //Looks more stuttery, which I do not like
                 //If we had some way to compare and interpolate states it would probably be fine but alas.
                 // Could interpolate camera posistion (as long as there hasn't been a jump, is still possible but will be a little bit harder)?
-                println!("Before physics: {} ms",current_time.elapsed().as_millis());
+                //println!("Before physics: {} ms",current_time.elapsed().as_millis());
                 while accumulator >= dt {
-                    println!("!");
+                    //println!("Clicked Unit has ID:{:?}", entity_handler.get_selected_unit());
                     //update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size); 
                     let time_update = Instant::now();
-                    update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size, &entity_map, &mut unit_vbo); 
-                    println!("Update game: {} ms", time_update.elapsed().as_millis());
+
+                    //This takes the majority of the time...
+                    entity_handler.entity_vbo.animate_all_entities((t*8.0).floor()%8.0,&entity_handler.entity_map);
+                    //println!("Animating units: {} ms", time_update.elapsed().as_millis());
+                    update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size, &mut entity_handler); 
+                    //println!("Update game: {} ms", time_update.elapsed().as_millis());
                     t += dt;
                     accumulator -= dt;
                 }
                 
 
                 //Render step
+
                 let time_update = Instant::now();
-                println!("Before fps-counter: {} ms",current_time.elapsed().as_millis());
+                //println!("Before fps-counter: {} ms",current_time.elapsed().as_millis());
                 //Linear interpolation between states, cant really do it but yeah...
                 //State state = currentState * alpha +  previousState * ( 1.0 - alpha );
                 let delta_time = timer.elapsed().as_secs_f32();
@@ -499,7 +501,9 @@ fn main() {
                 total_fps += overall_fps as usize;
                 let fps_as_text = format_to_exact_length(overall_fps as u32, 5) + "fps";
                 fps_text.change_text(fps_as_text);
-                text_renderer.replace_text(&fps_text);                
+
+                //It is this that takes the majority of the time
+                text_vbo.replace_text(&fps_text);           
                 
                 //println!("Redraw requested");´
                 //println!("Time for updating fps counter {}", dur2.elapsed().as_secs_f32());
@@ -509,11 +513,11 @@ fn main() {
                 //time += 0.02;
 
                 //let x_off = time.sin() * 0.5;
-                println!("Before clearing: {} ms",current_time.elapsed().as_millis());
+                //println!("Before clearing: {} ms",current_time.elapsed().as_millis());
                 let mut target = display.draw();
 
                 target.clear_color_and_depth((0.1, 0.4, 0.2, 1.0), 1.0);
-                println!("Before drawing: {} ms",current_time.elapsed().as_millis());
+                //println!("Before drawing: {} ms",current_time.elapsed().as_millis());
 
                 target.draw(
                     (&hex_renderer.vbo, hex_tiles.per_instance().unwrap()),
@@ -535,12 +539,12 @@ fn main() {
                     },
                 ).unwrap();
 
-                target.draw((&unit_renderer.vbo,unit_vbo.vbo.per_instance().unwrap()), &unit_renderer.indicies, &unit_renderer.program, &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&unit_atlas, text_behavior)}, &unit_renderer.draw_params).unwrap();
+                target.draw((&unit_renderer.vbo,entity_handler.entity_vbo.vbo.per_instance().unwrap(), entity_handler.entity_vbo.tex_vbo.per_instance().unwrap()), &unit_renderer.indicies, &unit_renderer.program, &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&unit_atlas, text_behavior)}, &unit_renderer.draw_params).unwrap();
                 
                 target.draw(&line_renderer.vbo, &line_renderer.indicies, &line_renderer.program, &uniform! {}, &line_renderer.draw_params).unwrap();
                 
                 target.draw(&ui_renderer.vbo, &ui_renderer.indicies, &ui_renderer.program, &uniform! {tex:&font_atlas}, &Default::default()).unwrap();
-                target.draw(&text_renderer.vbo, &text_renderer.indicies, &text_renderer.program, &uniform! {tex:glium::uniforms::Sampler(&font_atlas, text_behavior)}, &text_renderer.draw_params).unwrap();
+                target.draw((&text_renderer.vbo, text_vbo.vbo.per_instance().unwrap()), &text_renderer.indicies, &text_renderer.program, &uniform! {tex:glium::uniforms::Sampler(&font_atlas, text_behavior)}, &text_renderer.draw_params).unwrap();
                 
                 //trig_renderer.draw(&mut target, Some(&params), Some(&uniform! { model: obj_size, projection: perspective, view:camera.camera_matrix.to_cols_array_2d(), u_light:light}));
                 //hex_renderer.draw(&mut target, Some(&params), Some(&uniform!{matrix: hex_size, perspective: perspective}));
@@ -548,9 +552,9 @@ fn main() {
                 //sleep(Duration::from_millis(14));
                 //println!("Time for drawing {}", dur2.elapsed().as_secs_f32());
                 //dur2 = Instant::now();
-                println!("Before finishing: {} ms",current_time.elapsed().as_millis());
+                //println!("Before finishing: {} ms",current_time.elapsed().as_millis());
                 target.finish().unwrap();
-                println!("In total: {} ms\n",current_time.elapsed().as_millis());
+                //println!("In total: {} ms\n",current_time.elapsed().as_millis());
                 frames = frames + 1.0;
                 //println!("Time for rendering to screen {}", dur2.elapsed().as_secs_f32());
                 //println!("\t\tTime for drawing frame: {} ms\n", dur2.elapsed().as_millis());
@@ -571,7 +575,7 @@ fn main() {
 }
 
 
-fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,hex_tiles:&mut VertexBuffer<Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32), entity_map: &EntityMap, unit_vbo: &mut UnitVbo){
+fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,hex_tiles:&mut VertexBuffer<Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32), entity_handler: &mut EntityHandler){
     //Update movement (Kanske göra efter allt annat... possibly):
     let mut movement = input_handler.get_movement();
     if movement.length() > 0.0{
@@ -607,7 +611,7 @@ fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &m
             //Gör så kameran bara uppdateras när man faktiskt rör på sig...
             if traveresed_whole_hex{
                 let update_hex_map_timer = Instant::now();
-                draw_functions::update_hex_map_colors(hex_tiles, world_vec,entity_map, unit_vbo, world_camera.offsets(),screen_size);
+                draw_functions::update_hex_map_colors(hex_tiles, world_vec,entity_handler, world_camera.offsets(),screen_size);
                 //println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
             }
             let intersect = ndc_to_intersection(&mouse_ndc,&camera.camera_matrix,camera.get_pos(),&camera.perspective);
@@ -616,4 +620,37 @@ fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &m
             camera.camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                 //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
         }
+}
+
+pub fn get_clicked_pos(layout: &HexLayout, mouse_pos: &mut Point, world_camera: &mut WorldCamera) -> (u32,u32){
+    //println!("Dimension is: {:#?}", window.inner_size());
+    let frac_hex = layout.pixel_to_hex(&mouse_pos);
+    let clicked_hex = frac_hex.hex_round();
+    
+    let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);                    
+    //Make these not hard coded...
+    // And move out into seperate function
+    clicked_y = 25 - clicked_y as isize;
+    clicked_x = 12 - clicked_x as isize;
+
+    let camera_offsets = world_camera.offsets();
+
+    //Make these then loop when crossing over the boundary.
+    clicked_x += camera_offsets.1; 
+    clicked_y += camera_offsets.0;
+
+    if clicked_x <= 0{
+        clicked_x = ((NUM_COLMS) as isize + clicked_x) % NUM_COLMS as isize;
+    }else if clicked_x >= NUM_COLMS as isize{
+        clicked_x = (clicked_x - (NUM_COLMS) as isize) % NUM_COLMS as isize;
+    }  
+    
+
+    if clicked_y <= 0{
+        clicked_y = ((NUM_ROWS) as isize + clicked_y) % NUM_ROWS as isize;
+    }else if clicked_y >= NUM_ROWS as isize{
+        clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
+    }  
+
+    return (clicked_x as u32, clicked_y as u32)
 }
