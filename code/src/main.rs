@@ -240,6 +240,9 @@ fn main() {
     
     let mut line_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::LinesList), &line_vert_shader, &line_frag_shader, None, &display, Some(line_params)).unwrap();
     let mut ui_renderer = rendering::render::Renderer::new_empty_dynamic(100, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, None).unwrap();
+    
+    //Make the text_renderer also renderer instances of the same quad.
+    // Should in theory be faster, atleast less data needs to be changed and transferred between GPU and CPU.
     let mut text_renderer = rendering::render::Renderer::new_empty_dynamic(256, Some(glium::index::PrimitiveType::TrianglesList), &line_vert_shader, &line_frag_shader, None, &display, Some(text_params)).unwrap();
     
     
