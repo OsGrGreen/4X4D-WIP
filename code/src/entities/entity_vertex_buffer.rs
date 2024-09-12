@@ -93,9 +93,10 @@ impl EntityVBO{
         let write_slice = self.tex_vbo.slice_mut(0..self.end as usize).unwrap();
         let none = EntityTexAttr{tex_offsets: [0.0,0.0,0.0]};
         let mut write_vec:Vec<EntityTexAttr> = vec![none;entities.entities.len()];
+        //println!("{}", entities.entities.len());
         for (_, unit) in entities.entities.iter(){
             let mut tex_offsets = unit.get_texture();
-            tex_offsets[0] += 1.0*0.125*(time); //replace 0.125 with tex_offsets[2]
+            tex_offsets[0] += 1.0*tex_offsets[2]*(time); //replace 0.125 with tex_offsets[2]
             if tex_offsets[0] >= 1.0{
                 tex_offsets[0] = 0.0;
             }

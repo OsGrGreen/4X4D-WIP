@@ -9,8 +9,8 @@ use units::unit::BaseUnit;
 use util::{input_handler::{self, InputHandler}, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
 use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface, VertexBuffer};
-use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::qoffset_from_cube, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
-use std::{collections::HashMap, mem, os::windows::thread, thread::sleep, time::{Duration, Instant}};
+use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::{qoffset_from_cube, qoffset_to_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
+use std::{any::Any, collections::HashMap, mem, os::windows::thread, thread::sleep, time::{Duration, Instant}};
 
 
 mod rendering;
@@ -98,9 +98,13 @@ fn main() {
 
 
     println!("world vec length is {:#?} x {:#?}", world_vec.len(), world_vec[0].len());
-    world_vec[12][25].set_biome(6);
-    world_vec[13][25].improve();
-    world_vec[12][26].improve();
+    //world_vec[12][25].set_biome(6);
+    world_vec[0][0].set_biome(6);
+    //world_vec[10][0].set_biome(6);
+    //world_vec[13][25].improve();
+    //world_vec[12][26].improve();
+
+    
 
     // Closest camera can be: z = 2.15
     // Furtherst camera can be: z = 4.85
@@ -280,10 +284,22 @@ fn main() {
     println!("Screen size {:#?}", screen_size);
     //Börjar med att köra en column i taget.
     let mut unit_data: Vec<EntityPosAttr> = vec![];
-
+    
     for q in top..=bottom{
         let q_offset = q>>1;
         for r in left-q_offset..=right-q_offset{
+
+            let test_hex = Hex::new(q,r,-q-r);
+            let convert = qoffset_from_cube(EVEN, &test_hex);
+            let convert_convert: (u32,u32) = (convert.0 as u32, convert.1 as u32);
+            let converted_hex = qoffset_to_cube(EVEN, convert_convert);
+
+            assert!(test_hex.get_q() == converted_hex.get_q());
+            assert!(test_hex.get_r() == converted_hex.get_r());
+
+            println!("{:?} == {:?}", test_hex, converted_hex);
+
+
             let coords = layout.hex_to_pixel(&Hex::new(q, r, -q-r));
 
             let color_choose = (((q-r) % 3) + 3) % 3;
@@ -309,7 +325,10 @@ fn main() {
     println!("Expected layout size is {}w, {}h",layout.get_width(),layout.get_height());
     println!("data length is: {}", data.len());
     //println!("data is: {:#?}", data);
-
+    let mut entity_handler: EntityHandler = EntityHandler::new(100, &display);
+    entity_handler.create_unit(&mut world_vec, (26,13), UnitType::worker, 0,0,0,0,0);
+    entity_handler.select((26,13));
+    world_vec[26][13].set_biome(7);
     
     //println!("{:#?}", data[0]);
     println!("Amount of true hexes are: {:#?}", amount_of_hexes);
@@ -317,10 +336,6 @@ fn main() {
     // Maybe try to have a double buffer of some kind..
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
     let mut hex_tiles: VertexBuffer<Attr> = glium::vertex::VertexBuffer::dynamic(&display, &data).unwrap();
-    let mut entity_handler: EntityHandler = EntityHandler::new(100, &display);
-    entity_handler.create_unit(&mut world_vec, (12,26), UnitType::worker, 0,0,0,0,0);
-    entity_handler.create_unit(&mut world_vec, (13,26), UnitType::worker, 0,0,0,0,0);
-    entity_handler.create_unit(&mut world_vec, (12,25), UnitType::warrior, 0,0,0,0,0);
 
 
     draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
@@ -368,43 +383,28 @@ fn main() {
             winit::event::WindowEvent::MouseInput { device_id: _, state, button } =>{
                 if state.is_pressed(){
 
-                    //println!("Dimension is: {:#?}", window.inner_size());
-                    let frac_hex = layout.pixel_to_hex(&mouse_pos);
-                    let clicked_hex = frac_hex.hex_round();
-                    
-                    let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);                    
-                    
-                    //Make these not hard coded...
-                    // And move out into seperate function
-                    clicked_y = 25 - clicked_y as isize;
-                    clicked_x = 12 - clicked_x as isize;
-    
-                    let camera_offsets = world_camera.offsets();
-    
-                    //Make these then loop when crossing over the boundary.
-                    clicked_x += camera_offsets.1; 
-                    clicked_y += camera_offsets.0;
-
-                    if clicked_x <= 0{
-                        clicked_x = ((NUM_COLMS) as isize + clicked_x) % NUM_COLMS as isize;
-                    }else if clicked_x >= NUM_COLMS as isize{
-                        clicked_x = (clicked_x - (NUM_COLMS) as isize) % NUM_COLMS as isize;
-                    }  
-                    
-
-                    if clicked_y <= 0{
-                        clicked_y = ((NUM_ROWS) as isize + clicked_y) % NUM_ROWS as isize;
-                    }else if clicked_y >= NUM_ROWS as isize{
-                        clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
-                    }  
+                    let (clicked_x, clicked_y) = get_clicked_pos(&layout, &mut mouse_pos, &mut world_camera);
 
                     // Do not do the update here (add it to the job queue)
-                    let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
-                    world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
+                    entity_handler.select((clicked_x,clicked_y));
+                    if entity_handler.get_selected_unit().is_some(){
+                        let unit = entity_handler.get_selected_unit().unwrap();
+                        println!("Clicked pos is: {:#?}, and unit pos is: {:#?}", (clicked_x, clicked_y), unit.get_pos());
+                        // qoffset_from_cube(EVEN,&clicked_hex);  
+                        let neighbors = Hex::neighbors_in_range_offset(unit.get_pos(), 2);
+                        for neighbor in neighbors{
+                            world_vec[neighbor.0 as usize][neighbor.1 as usize].set_occupied(1);
+                        }
+                    }
+                    //let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
+                    println!("Clicked tile was: {:?}, {:?}", qoffset_to_cube(EVEN, (clicked_x as u32, clicked_y as u32)), (clicked_x, clicked_y));
+                    //world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
                     draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
-                    println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
+                    //println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
 
                     //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
+                }else{
+
                 }
             }
 
@@ -470,25 +470,26 @@ fn main() {
                 //Looks more stuttery, which I do not like
                 //If we had some way to compare and interpolate states it would probably be fine but alas.
                 // Could interpolate camera posistion (as long as there hasn't been a jump, is still possible but will be a little bit harder)?
-                println!("Before physics: {} ms",current_time.elapsed().as_millis());
+                //println!("Before physics: {} ms",current_time.elapsed().as_millis());
                 while accumulator >= dt {
-                    println!("!");
+                    //println!("Clicked Unit has ID:{:?}", entity_handler.get_selected_unit());
                     //update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size); 
                     let time_update = Instant::now();
 
                     //This takes the majority of the time...
-                    entity_handler.entity_vbo.animate_all_entities((frames as f32) % 8.0,&entity_handler.entity_map);
-                    println!("Animating units: {} ms", time_update.elapsed().as_millis());
+                    entity_handler.entity_vbo.animate_all_entities((t*8.0).floor()%8.0,&entity_handler.entity_map);
+                    //println!("Animating units: {} ms", time_update.elapsed().as_millis());
                     update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size, &mut entity_handler); 
-                    println!("Update game: {} ms", time_update.elapsed().as_millis());
+                    //println!("Update game: {} ms", time_update.elapsed().as_millis());
                     t += dt;
                     accumulator -= dt;
                 }
                 
 
                 //Render step
+
                 let time_update = Instant::now();
-                println!("Before fps-counter: {} ms",current_time.elapsed().as_millis());
+                //println!("Before fps-counter: {} ms",current_time.elapsed().as_millis());
                 //Linear interpolation between states, cant really do it but yeah...
                 //State state = currentState * alpha +  previousState * ( 1.0 - alpha );
                 let delta_time = timer.elapsed().as_secs_f32();
@@ -512,11 +513,11 @@ fn main() {
                 //time += 0.02;
 
                 //let x_off = time.sin() * 0.5;
-                println!("Before clearing: {} ms",current_time.elapsed().as_millis());
+                //println!("Before clearing: {} ms",current_time.elapsed().as_millis());
                 let mut target = display.draw();
 
                 target.clear_color_and_depth((0.1, 0.4, 0.2, 1.0), 1.0);
-                println!("Before drawing: {} ms",current_time.elapsed().as_millis());
+                //println!("Before drawing: {} ms",current_time.elapsed().as_millis());
 
                 target.draw(
                     (&hex_renderer.vbo, hex_tiles.per_instance().unwrap()),
@@ -551,9 +552,9 @@ fn main() {
                 //sleep(Duration::from_millis(14));
                 //println!("Time for drawing {}", dur2.elapsed().as_secs_f32());
                 //dur2 = Instant::now();
-                println!("Before finishing: {} ms",current_time.elapsed().as_millis());
+                //println!("Before finishing: {} ms",current_time.elapsed().as_millis());
                 target.finish().unwrap();
-                println!("In total: {} ms\n",current_time.elapsed().as_millis());
+                //println!("In total: {} ms\n",current_time.elapsed().as_millis());
                 frames = frames + 1.0;
                 //println!("Time for rendering to screen {}", dur2.elapsed().as_secs_f32());
                 //println!("\t\tTime for drawing frame: {} ms\n", dur2.elapsed().as_millis());
@@ -619,4 +620,37 @@ fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &m
             camera.camera_matrix = camera.look_at(camera.get_pos()+camera.get_front());
                 //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&perspective)*camera_matrix*Mat4::IDENTITY));
         }
+}
+
+pub fn get_clicked_pos(layout: &HexLayout, mouse_pos: &mut Point, world_camera: &mut WorldCamera) -> (u32,u32){
+    //println!("Dimension is: {:#?}", window.inner_size());
+    let frac_hex = layout.pixel_to_hex(&mouse_pos);
+    let clicked_hex = frac_hex.hex_round();
+    
+    let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);                    
+    //Make these not hard coded...
+    // And move out into seperate function
+    clicked_y = 25 - clicked_y as isize;
+    clicked_x = 12 - clicked_x as isize;
+
+    let camera_offsets = world_camera.offsets();
+
+    //Make these then loop when crossing over the boundary.
+    clicked_x += camera_offsets.1; 
+    clicked_y += camera_offsets.0;
+
+    if clicked_x <= 0{
+        clicked_x = ((NUM_COLMS) as isize + clicked_x) % NUM_COLMS as isize;
+    }else if clicked_x >= NUM_COLMS as isize{
+        clicked_x = (clicked_x - (NUM_COLMS) as isize) % NUM_COLMS as isize;
+    }  
+    
+
+    if clicked_y <= 0{
+        clicked_y = ((NUM_ROWS) as isize + clicked_y) % NUM_ROWS as isize;
+    }else if clicked_y >= NUM_ROWS as isize{
+        clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
+    }  
+
+    return (clicked_x as u32, clicked_y as u32)
 }

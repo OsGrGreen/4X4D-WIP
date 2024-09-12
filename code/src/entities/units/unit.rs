@@ -98,4 +98,12 @@ impl Entity for BaseUnit{
     fn get_render_id(&self) -> usize {
         self.entity.render_id as usize
     }
+    
+    fn get_pos(&self) -> (u32,u32) {
+        self.entity.get_offset_pos()
+    }
+
+    fn get_movement(&self) -> u16{
+        self.entity.get_movement()
+    }
 }

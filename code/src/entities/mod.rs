@@ -13,6 +13,7 @@ pub mod entity_vertex_buffer;
 pub struct EntityHandler{
     pub entity_vbo: EntityVBO,
     pub entity_map: EntityMap,
+    selected_entity: Option<(u32,u32)>, //Gives the key to entity in the map.
 }
 
 impl EntityHandler{
@@ -20,6 +21,7 @@ impl EntityHandler{
         EntityHandler{
             entity_vbo: EntityVBO::new(max_entities, display),
             entity_map: EntityMap::new(),
+            selected_entity: None
         }
     }
 
@@ -29,7 +31,26 @@ impl EntityHandler{
         world[pos.0 as usize][pos.1 as usize].set_occupied(1);
 
     }
+
+    pub fn get_selected_unit(&self) -> Option<&Box<dyn Entity>>{
+        if self.selected_entity.is_some(){
+            self.entity_map.entities.get(&self.selected_entity.unwrap())
+        }else{
+            None
+        }
+    }
+
+    pub fn select(&mut self, pos: (u32,u32)){
+        if self.entity_map.entities.contains_key(&pos){
+            self.selected_entity = Some(pos);
+        }
+    }
+
+    pub fn deselect(&mut self){
+        self.selected_entity = None;
+    }
 }
+
 
 pub trait Entity{
     fn attack(&mut self) -> u16;
@@ -39,6 +60,15 @@ pub trait Entity{
     fn buff(&mut self) -> ();
     fn get_texture(&self) -> [f32;3];
     fn get_render_id(&self) -> usize;
+    fn get_pos(&self) -> (u32,u32);
+    fn get_movement(&self) -> u16;
+}
+
+use core::fmt::Debug;
+impl Debug for dyn Entity {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "ID: {}", self.get_render_id())
+    }
 }
 pub struct EntityMap{
     pub entities: HashMap<(u32,u32),Box<dyn Entity>>,
