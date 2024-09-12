@@ -392,9 +392,10 @@ fn main() {
                         println!("Clicked pos is: {:#?}, and unit pos is: {:#?}", (clicked_x, clicked_y), unit.get_pos());
                         // qoffset_from_cube(EVEN,&clicked_hex);  
                         let neighbors = Hex::neighbors_in_range_offset(unit.get_pos(), 2);
-                        for neighbor in neighbors{
+                        for neighbor in neighbors.as_slice(){
                             world_vec[neighbor.0 as usize][neighbor.1 as usize].set_improved(1);
                         }
+                        input_handler.affected_tiles = neighbors;
                     }
                     //let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
                     println!("Clicked tile was: {:?}, {:?}", qoffset_to_cube(EVEN, (clicked_x as u32, clicked_y as u32)), (clicked_x, clicked_y));
@@ -407,6 +408,9 @@ fn main() {
                     let (clicked_x, clicked_y) = get_clicked_pos(&layout, &mut mouse_pos, &mut world_camera);
                     entity_handler.move_unit((clicked_x,clicked_y), &mut world_vec);
                     println!("{:#?}", entity_handler.entity_map.entities);
+                    let _ = input_handler.affected_tiles.drain(..).for_each(|tile: (u32, u32)|{
+                        world_vec[tile.0 as usize][tile.1 as usize].set_improved(0);
+                    });
                     draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
             }
