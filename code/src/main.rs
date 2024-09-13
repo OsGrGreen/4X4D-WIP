@@ -483,8 +483,11 @@ fn main() {
                     //update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size); 
                     let time_update = Instant::now();
 
-                    //This takes the majority of the time...
-                    entity_handler.entity_vbo.animate_all_entities((t*8.0).floor()%8.0,&entity_handler.entity_map);
+                    // A much better solution would be to pass the time to the GPU/GLSL code
+                    // And then make these calculations there. This would reduce amount of data we need to transfer between CPU AND GPU each frame
+                    // It can also more easily be done in parallel which is good! 
+                    // This apparently had a very low impact, dont know why...  
+                    //entity_handler.entity_vbo.animate_all_entities((t*8.0).floor()%8.0,&entity_handler.entity_map);
                     //println!("Animating units: {} ms", time_update.elapsed().as_millis());
                     update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size, &mut entity_handler); 
                     //println!("Update game: {} ms", time_update.elapsed().as_millis());
@@ -545,8 +548,13 @@ fn main() {
                         .. Default::default()
                     },
                 ).unwrap();
+                let shader_time = (t*8.0).floor()%8.0;
+                //println!("Time is: {}", shader_time);
+                let un_modded_pos = 0.0+0.125*shader_time;
+                //println!("Pos is: {}", un_modded_pos);
+                //    float animation_step = mod(tex_offsets.x+1.0*tex_offsets.z*time,animation_length);
 
-                target.draw((&unit_renderer.vbo,entity_handler.entity_vbo.vbo.per_instance().unwrap(), entity_handler.entity_vbo.tex_vbo.per_instance().unwrap()), &unit_renderer.indicies, &unit_renderer.program, &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&unit_atlas, text_behavior)}, &unit_renderer.draw_params).unwrap();
+                target.draw((&unit_renderer.vbo,entity_handler.entity_vbo.vbo.per_instance().unwrap(), entity_handler.entity_vbo.tex_vbo.per_instance().unwrap()), &unit_renderer.indicies, &unit_renderer.program, &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&unit_atlas, text_behavior), time: (t*8.0).floor()%8.0}, &unit_renderer.draw_params).unwrap();
                 
                 target.draw(&line_renderer.vbo, &line_renderer.indicies, &line_renderer.program, &uniform! {}, &line_renderer.draw_params).unwrap();
                 

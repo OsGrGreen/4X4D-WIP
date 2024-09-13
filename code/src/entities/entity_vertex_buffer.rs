@@ -4,7 +4,7 @@ use crate::{entities::{Entity, EntityMap}, Attr};
 use glium::{glutin::surface::WindowSurface, Display};
 use rand::{random, Rng};
 
-use super::units::unit::BaseUnit;
+use super::units::unit::{BaseUnit, UnitType};
 
 
 #[derive(Copy, Clone, Debug)]
@@ -75,6 +75,15 @@ impl EntityVBO{
             }
             write_slice.write(&read_slice);
         }
+    }
+
+
+    // Make this able to handle if start is not end...
+    pub fn add_texture_unit(&mut self, unit_type: UnitType){
+        let write_slice = self.tex_vbo.slice_mut(self.end as usize..self.end as usize + 1).unwrap();
+        write_slice.write(&[EntityTexAttr{tex_offsets: BaseUnit::type_to_texture_ids(&unit_type)}]);
+        self.end += 1;
+        self.start += 1;
     }
 
     /*pub fn remove_units(&mut self, units:Vec<BaseUnit>){

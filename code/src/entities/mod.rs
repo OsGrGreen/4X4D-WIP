@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use entity_base::BaseEntity;
+use std::collections::HashMap;use entity_base::BaseEntity;
 use glium::{glutin::surface::WindowSurface, Display};
 use entity_vertex_buffer::EntityVBO;
 use units::unit::{BaseUnit, UnitType};
@@ -28,9 +27,8 @@ impl EntityHandler{
 
     pub fn create_unit(&mut self, world: &mut Vec<Vec<Tile>>, pos: (u32,u32), unit_type: UnitType, player_id: u8,extra_health: i32, extra_movement: i16, extra_power: i32, extra_range: i16){
         self.entity_map.entities.insert(pos, Box::new(BaseUnit::new(unit_type, self.entity_vbo.end,extra_health,extra_power, extra_range, extra_movement, player_id, pos))); 
-        self.entity_vbo.end += 1;
+        self.entity_vbo.add_texture_unit(unit_type);
         world[pos.0 as usize][pos.1 as usize].set_occupied(1);
-
     }
 
     pub fn get_selected_unit(&self) -> Option<&Box<dyn Entity>>{
