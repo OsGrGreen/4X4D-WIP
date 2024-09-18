@@ -50,6 +50,7 @@ I think this should minimize the amount of memory needed.
         - [x] Knowing which units are beside you
     - [ ] Add creation of units (player input)
 - [ ] World generation
+- [ ] Convert (u32,u32) to struct with single u32.
 - [ ] Create a game struct that you modify each frame/turn
 - [ ] Update input logic and so on
 - [ ] Make logic for building cities and buildings in cities
@@ -58,6 +59,7 @@ I think this should minimize the amount of memory needed.
     - [ ] Make the queue of actions be handled at the end of a turn.
     - [ ] Reset unit movement
     - [ ] Increment all players resources
+- [ ] Make factions and stuff...
 - [ ] Make player able to have land
 - [ ] Make menus and stuff
     -  [ ] Settings

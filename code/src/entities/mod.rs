@@ -3,7 +3,7 @@ use glium::{glutin::surface::WindowSurface, Display};
 use entity_vertex_buffer::EntityVBO;
 use units::unit::{BaseUnit, UnitType};
 
-use crate::world::{hex::Hex, layout::EVEN, offset_coords::qoffset_to_cube, tile::Tile};
+use crate::world::{hex::Hex, layout::EVEN, offset_coords::qoffset_to_cube, tile::Tile, OffsetTile};
 
 pub mod entity_base;
 pub mod units;
@@ -13,7 +13,7 @@ pub mod entity_vertex_buffer;
 pub struct EntityHandler{
     pub entity_vbo: EntityVBO,
     pub entity_map: EntityMap,
-    selected_entity: Option<(u32,u32)>, //Gives the key to entity in the map.
+    selected_entity: Option<OffsetTile>, //Gives the key to entity in the map.
 }
 
 impl EntityHandler{
@@ -25,10 +25,10 @@ impl EntityHandler{
         }
     }
 
-    pub fn create_unit(&mut self, world: &mut Vec<Vec<Tile>>, pos: (u32,u32), unit_type: UnitType, player_id: u8,extra_health: i32, extra_movement: i16, extra_power: i32, extra_range: i16){
+    pub fn create_unit(&mut self, world: &mut Vec<Vec<Tile>>, pos: OffsetTile, unit_type: UnitType, player_id: u8,extra_health: i32, extra_movement: i16, extra_power: i32, extra_range: i16){
         self.entity_map.entities.insert(pos, Box::new(BaseUnit::new(unit_type, self.entity_vbo.end,extra_health,extra_power, extra_range, extra_movement, player_id, pos))); 
         self.entity_vbo.add_texture_unit(unit_type);
-        world[pos.0 as usize][pos.1 as usize].set_occupied(1);
+        world[pos.getX() as usize][pos.getY() as usize].set_occupied(1);
     }
 
     pub fn get_selected_unit(&self) -> Option<&Box<dyn Entity>>{
@@ -39,7 +39,7 @@ impl EntityHandler{
         }
     }
 
-    pub fn get_neighbouring_units(&self, neighbor_tiles: Vec<(u32,u32)>) -> Vec<(u32,u32)>{
+    pub fn get_neighbouring_units(&self, neighbor_tiles: Vec<OffsetTile>) -> Vec<OffsetTile>{
         let mut return_vec = vec![];
 
         for pos in neighbor_tiles{
@@ -51,7 +51,7 @@ impl EntityHandler{
         return return_vec;
     }
 
-    pub fn get_friendly_neighbouring_units(&self, target_tile: (u32,u32), neighbor_tiles: Vec<(u32,u32)>) -> Vec<(u32,u32)>{
+    pub fn get_friendly_neighbouring_units(&self, target_tile: OffsetTile, neighbor_tiles: Vec<OffsetTile>) -> Vec<OffsetTile>{
         let mut return_vec = vec![];
         let main_unit = self.entity_map.entities.get(&target_tile).unwrap();
         for pos in neighbor_tiles{
@@ -67,7 +67,7 @@ impl EntityHandler{
         return return_vec;
     }
 
-    pub fn move_unit(&mut self, target_pos: (u32,u32), world:&mut Vec<Vec<Tile>>) -> bool{
+    pub fn move_unit(&mut self, target_pos: OffsetTile, world:&mut Vec<Vec<Tile>>) -> bool{
 
         //Check that target_pos is not forbidden tile...
 
@@ -84,12 +84,12 @@ impl EntityHandler{
                 if move_distance > selected_unit.get_movement().into(){
                     return false;
                 }
-                if world[target_pos.0 as usize][target_pos.1 as usize].get_occupied() == 0{
+                if world[target_pos.getX() as usize][target_pos.getY() as usize].get_occupied() == 0{
                     // Remove the unit from the current tile
-                    world[pos.0 as usize][pos.1 as usize].set_occupied(0);
+                    world[pos.getX() as usize][pos.getY() as usize].set_occupied(0);
 
                     // Make new tile occupied
-                    world[target_pos.0 as usize][target_pos.1 as usize].set_occupied(1);
+                    world[target_pos.getX() as usize][target_pos.getY() as usize].set_occupied(1);
 
                     // Update unit
                     selected_unit.movement(target_pos, move_distance);
@@ -113,7 +113,7 @@ impl EntityHandler{
         }
     }
 
-    pub fn select(&mut self, pos: (u32,u32)){
+    pub fn select(&mut self, pos: OffsetTile){
         if self.entity_map.entities.contains_key(&pos){
             self.selected_entity = Some(pos);
         }
@@ -127,12 +127,12 @@ impl EntityHandler{
 pub trait Entity{
     fn attack(&mut self) -> u16;
     fn damage(&mut self, dmg: u16) -> bool;
-    fn movement(&mut self, target_pos: (u32,u32), distance: u16) -> ();
+    fn movement(&mut self, target_pos: OffsetTile, distance: u16) -> ();
     fn destroy(&mut self) -> ();
     fn buff(&mut self) -> ();
     fn get_texture(&self) -> [f32;3];
     fn get_render_id(&self) -> usize;
-    fn get_pos(&self) -> (u32,u32);
+    fn get_pos(&self) -> OffsetTile;
     fn get_movement(&self) -> u16;
     fn clone(&self) -> Box<dyn Entity>;
     fn get_entity(&self) -> BaseEntity;
@@ -147,7 +147,7 @@ impl Debug for dyn Entity {
     }
 }
 pub struct EntityMap{
-    pub entities: HashMap<(u32,u32),Box<dyn Entity>>,
+    pub entities: HashMap<OffsetTile,Box<dyn Entity>>,
 }
 
 impl EntityMap{

@@ -1,4 +1,4 @@
-use crate::entities::{entity_base::BaseEntity, Entity};
+use crate::{entities::{entity_base::BaseEntity, Entity}, world::OffsetTile};
 
 #[derive(Copy, Clone, Debug)]
 pub enum UnitType {
@@ -15,7 +15,7 @@ pub struct BaseUnit{
 }
 
 impl BaseUnit{
-    pub fn new(unit_type: UnitType, render_id: u32,extra_health: i32, extra_power: i32, extra_range: i16, extra_movement: i16, player_id: u8, pos: (u32, u32)) -> BaseUnit{
+    pub fn new(unit_type: UnitType, render_id: u32,extra_health: i32, extra_power: i32, extra_range: i16, extra_movement: i16, player_id: u8, pos: OffsetTile) -> BaseUnit{
         let health = Self::type_to_health(&unit_type) + extra_health;
         let power = Self::type_to_power(&unit_type) + extra_power;
         let range = Self::type_to_range(&unit_type) + extra_range;
@@ -86,7 +86,7 @@ impl Entity for BaseUnit{
     }
 
     //Maybe check if movement is legal here...
-    fn movement(&mut self, target_pos: (u32,u32), distance: u16) -> () {
+    fn movement(&mut self, target_pos: OffsetTile, distance: u16) -> () {
         self.entity.set_pos(target_pos);
         self.entity.decrement_movement(distance);
     }
@@ -107,7 +107,7 @@ impl Entity for BaseUnit{
         self.entity.render_id as usize
     }
     
-    fn get_pos(&self) -> (u32,u32) {
+    fn get_pos(&self) -> OffsetTile {
         self.entity.get_offset_pos()
     }
 

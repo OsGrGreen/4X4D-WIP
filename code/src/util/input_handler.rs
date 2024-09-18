@@ -4,10 +4,12 @@ use glam::Vec2;
 use rayon::vec;
 use winit::{event::{KeyEvent}, keyboard::{self, PhysicalKey}};
 
+use crate::world::OffsetTile;
+
 pub struct InputHandler{
     movement: Vec2,
     pressed_keys: HashSet<PhysicalKey>, //Maybe make into a map and it has to be processed before it is removed...
-    pub affected_tiles: Vec<(u32,u32)>,
+    pub affected_tiles: Vec<OffsetTile>,
 }
 
 impl InputHandler{

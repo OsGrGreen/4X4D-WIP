@@ -1,13 +1,20 @@
 use crate::world::layout::{EVEN, ODD};
 
-use super::hex::Hex;
+use super::{hex::Hex, OffsetTile};
 
 
 
 /**
  * For flat rotation
  */
-pub fn qoffset_from_cube(offset: i32, h:&Hex) -> (isize,isize){
+pub fn qoffset_from_cube(offset: i32, h:&Hex) -> OffsetTile{
+    assert!(offset == EVEN || offset == ODD);
+    let col = h.get_q() as isize;
+    let row: i32 = (h.get_r() + (h.get_q() + offset * (h.get_q() & 1)) / 2 as i32);
+    return OffsetTile::new(col as u32, row as u32);
+}
+
+pub fn qoffset_from_cube_offsets(offset: i32, h:&Hex) -> (isize,isize){
     assert!(offset == EVEN || offset == ODD);
     let col = h.get_q() as isize;
     let row: i32 = (h.get_r() + (h.get_q() + offset * (h.get_q() & 1)) / 2 as i32);
@@ -17,7 +24,17 @@ pub fn qoffset_from_cube(offset: i32, h:&Hex) -> (isize,isize){
 /**
  * For flat rotation
  */
-pub fn qoffset_to_cube(offset: i32, tile: (u32,u32)) -> Hex{
+pub fn qoffset_to_cube(offset: i32, tile: OffsetTile) -> Hex{
+    let col = tile.getX() as i32;
+    let row = tile.getY() as i32;
+    assert!(offset == EVEN || offset == ODD);
+    let q = col;
+    let r: i32 = (row - (col + offset * (col & 1)) / 2 as i32);
+    let s = -q-r;
+    Hex::new(q, r, s)
+}
+
+pub fn qoffset_to_cube_offsets(offset: i32, tile: (u32,u32)) -> Hex{
     let col = tile.0 as i32;
     let row = tile.1 as i32;
     assert!(offset == EVEN || offset == ODD);

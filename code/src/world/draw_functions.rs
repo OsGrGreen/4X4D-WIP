@@ -1,7 +1,7 @@
 
 use crate::{entities::{self, entity_vertex_buffer::{EntityPosAttr, EntityVBO}, EntityHandler}, Attr};
 
-use super::{tile::Tile, NUM_COLMS, NUM_ROWS};
+use super::{tile::Tile, OffsetTile, NUM_COLMS, NUM_ROWS};
 
 
 #[derive(Copy, Clone, Debug)]
@@ -119,7 +119,7 @@ pub fn update_hex_map_colors(pos_buffer: &glium::VertexBuffer<World_Pos>, attr_b
                 *c -= 0.4;
             }
         }
-        let unit_pos = (row_pos as u32,column_pos as u32);
+        let unit_pos = OffsetTile::new(row_pos as u32,column_pos as u32);
         if current_tile.get_occupied() == 1{
             if entity_handler.entity_map.entities.contains_key(&unit_pos)   {
                 write_vec[entity_handler.entity_map.entities.get(&unit_pos).unwrap().get_render_id()] = EntityPosAttr{

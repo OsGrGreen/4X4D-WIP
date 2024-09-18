@@ -2,7 +2,7 @@ use std::{cmp::{max, min}, ops};
 
 use crate::world::layout::ODD;
 
-use super::{layout::EVEN, offset_coords::{qoffset_from_cube, qoffset_to_cube}};
+use super::{layout::EVEN, offset_coords::{qoffset_from_cube, qoffset_to_cube}, OffsetTile};
 
 
 #[derive(Copy, Clone,Debug)]
@@ -67,10 +67,10 @@ impl Hex{
         return results;
     }
 
-    pub fn neighbors_in_range_offset(center: (u32,u32), n: u16) -> Vec<(u32,u32)>{
+    pub fn neighbors_in_range_offset(center: OffsetTile, n: u16) -> Vec<OffsetTile>{
         let center_hex = qoffset_to_cube(EVEN, center);
         let range: i32 = n as i32;
-        let mut results:Vec<(u32,u32)> = vec![];
+        let mut results:Vec<OffsetTile> = vec![];
         for q in -range..range+1{
             //println!("Q: {}", q);
             let r1 = (-range).max(-q - range);
@@ -86,7 +86,7 @@ impl Hex{
                 // Qoffset from cube ger kanske inte direkt utifrån vår vector...
                 let tile = qoffset_from_cube(EVEN, &to_push);
 
-                results.push((tile.0 as u32, tile.1 as u32));
+                results.push(tile);
             }
         }
 

@@ -9,7 +9,7 @@ use units::unit::BaseUnit;
 use util::{input_handler::{self, InputHandler}, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
 use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface, VertexBuffer};
-use world::{draw_functions::{self, World_Attr, World_Pos, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::{qoffset_from_cube, qoffset_to_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
+use world::{draw_functions::{self, World_Attr, World_Pos, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::{qoffset_from_cube, qoffset_from_cube_offsets, qoffset_to_cube, qoffset_to_cube_offsets}, tile::Tile, world_camera::WorldCamera, OffsetTile, NUM_COLMS, NUM_ROWS};
 use std::{any::Any, collections::HashMap, mem, os::windows::thread, thread::sleep, time::{Duration, Instant}};
 
 
@@ -75,10 +75,8 @@ fn main() {
     println!("City: {:?} bytes",mem::size_of::<City>());
     println!("UnitVBO: {:?} bytes",mem::size_of::<UnitVbo>());
     println!("Resource: {:?} bytes",mem::size_of::<Resource>());
+    */
 
-
-
-    if true{return}*/
 
     //First value is what row, second value is what column
     // 0,0 is bottom left corner
@@ -285,15 +283,15 @@ fn main() {
     println!("Screen size {:#?}", screen_size);
     //Börjar med att köra en column i taget.
     let mut unit_data: Vec<EntityPosAttr> = vec![];
-    
+
     for q in top..=bottom{
         let q_offset = q>>1;
         for r in left-q_offset..=right-q_offset{
 
             let test_hex = Hex::new(q,r,-q-r);
-            let convert = qoffset_from_cube(EVEN, &test_hex);
+            let convert = qoffset_from_cube_offsets(EVEN, &test_hex);
             let convert_convert: (u32,u32) = (convert.0 as u32, convert.1 as u32);
-            let converted_hex = qoffset_to_cube(EVEN, convert_convert);
+            let converted_hex = qoffset_to_cube_offsets(EVEN, convert_convert);
 
             assert!(test_hex.get_q() == converted_hex.get_q());
             assert!(test_hex.get_r() == converted_hex.get_r());
@@ -324,14 +322,18 @@ fn main() {
             world_attr_data.push(val_data);
         }
     }
-
+    let mut entity_handler: EntityHandler = EntityHandler::new(100, &display);
+    
+    // Having a unit in every tile, has minimal impact on performance... 
+    // 141 vs 148 average fps (not really very good measurements, maybe test this more)
+    // However, having a too big of a VBO significally slows down the program
+    // Solution must be to have dynamic size of the VBO, and create a bigger one if it is needed...
     println!("Layout size is: {:#?}", layout.size);
     println!("Expected layout size is {}w, {}h",layout.get_width(),layout.get_height());
     println!("data length is: {}", world_pos_data.len());
     //println!("data is: {:#?}", data);
-    let mut entity_handler: EntityHandler = EntityHandler::new(100, &display);
-    entity_handler.create_unit(&mut world_vec, (26,13), UnitType::worker, 0,0,0,0,0);
-    entity_handler.select((26,13));
+    entity_handler.create_unit(&mut world_vec, OffsetTile::new(26,13), UnitType::worker, 0,0,0,0,0);
+    entity_handler.select(OffsetTile::new(26,13));
     world_vec[26][13].set_biome(7);
     
     //println!("{:#?}", data[0]);
@@ -389,36 +391,36 @@ fn main() {
             winit::event::WindowEvent::MouseInput { device_id: _, state, button } =>{
                 if state.is_pressed(){
 
-                    let (clicked_x, clicked_y) = get_clicked_pos(&layout, &mut mouse_pos, &mut world_camera);
+                    let clicked_tile = get_clicked_pos(&layout, &mut mouse_pos, &mut world_camera);
 
                     // Do not do the update here (add it to the job queue)
-                    entity_handler.select((clicked_x,clicked_y));
+                    entity_handler.select(clicked_tile);
 
                     
                     if entity_handler.get_selected_unit().is_some(){
                         let unit = entity_handler.get_selected_unit().unwrap();
-                        println!("Clicked pos is: {:#?}, and unit pos is: {:#?}", (clicked_x, clicked_y), unit.get_pos());
+                        println!("Clicked pos is: {:#?}, and unit pos is: {:#?}", (clicked_tile.getX(), clicked_tile.getY()), unit.get_pos());
                         // qoffset_from_cube(EVEN,&clicked_hex);  
                         let neighbors = Hex::neighbors_in_range_offset(unit.get_pos(), unit.get_movement());
                         for neighbor in neighbors.as_slice(){
                             //Check that target_pos is not forbidden tile...
-                            world_vec[neighbor.0 as usize][neighbor.1 as usize].set_improved(1);
+                            world_vec[neighbor.getX() as usize][neighbor.getY() as usize].set_improved(1);
                         }
                         input_handler.affected_tiles = neighbors;
                     }
                     //let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
-                    println!("Clicked tile was: {:?}, {:?}", qoffset_to_cube(EVEN, (clicked_x as u32, clicked_y as u32)), (clicked_x, clicked_y));
+                    println!("Clicked tile was: {:?}, {:?}", qoffset_to_cube(EVEN, clicked_tile), (clicked_tile.getX(), clicked_tile.getY()));
                     //world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
                     draw_functions::update_hex_map_colors(&hex_pos,&mut hex_attr, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                     //println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
 
                     //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
                 }else{
-                    let (clicked_x, clicked_y) = get_clicked_pos(&layout, &mut mouse_pos, &mut world_camera);
-                    entity_handler.move_unit((clicked_x,clicked_y), &mut world_vec);
+                    let clicked_tile = get_clicked_pos(&layout, &mut mouse_pos, &mut world_camera);
+                    entity_handler.move_unit(clicked_tile, &mut world_vec);
                     println!("{:#?}", entity_handler.entity_map.entities);
-                    let _ = input_handler.affected_tiles.drain(..).for_each(|tile: (u32, u32)|{
-                        world_vec[tile.0 as usize][tile.1 as usize].set_improved(0);
+                    let _ = input_handler.affected_tiles.drain(..).for_each(|tile: OffsetTile|{
+                        world_vec[tile.getX() as usize][tile.getY() as usize].set_improved(0);
                     });
                     draw_functions::update_hex_map_colors(&hex_pos,&mut hex_attr, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
@@ -489,15 +491,8 @@ fn main() {
                 //println!("Before physics: {} ms",current_time.elapsed().as_millis());
                 while accumulator >= dt {
                     //println!("Clicked Unit has ID:{:?}", entity_handler.get_selected_unit());
-                    //update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size); 
                     let time_update = Instant::now();
 
-                    // A much better solution would be to pass the time to the GPU/GLSL code
-                    // And then make these calculations there. This would reduce amount of data we need to transfer between CPU AND GPU each frame
-                    // It can also more easily be done in parallel which is good! 
-                    // This apparently had a very low impact, dont know why...  
-                    //entity_handler.entity_vbo.animate_all_entities((t*8.0).floor()%8.0,&entity_handler.entity_map);
-                    //println!("Animating units: {} ms", time_update.elapsed().as_millis());
                     update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&hex_pos,&mut hex_attr, mouse_ndc, &mut mouse_pos, screen_size, &mut entity_handler); 
                     //println!("Update game: {} ms", time_update.elapsed().as_millis());
                     t += dt;
@@ -535,7 +530,7 @@ fn main() {
                 //println!("Before clearing: {} ms",current_time.elapsed().as_millis());
                 let mut target = display.draw();
 
-                target.clear_color_and_depth((0.1, 0.4, 0.2, 1.0), 1.0);
+                target.clear_color_and_depth((0.0, 0.1, 1.0, 1.0), 1.0);
                 //println!("Before drawing: {} ms",current_time.elapsed().as_millis());
 
                 target.draw(
@@ -544,7 +539,7 @@ fn main() {
                     // For different hexes make a texture atlas so a specific tile has a texture in the atlas
                     // Then each instance have different UV coords! 
                     &hex_renderer.program,
-                    &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&tile_texture_atlas, text_behavior)},
+                    &uniform! { model: hex_size_mat, projection: camera.perspective.to_cols_array_2d(), view:camera.camera_matrix.to_cols_array_2d(), tex: glium::uniforms::Sampler(&tile_texture_atlas, text_behavior), u_time: t},
                     &glium::DrawParameters {
                         depth: glium::Depth {
                             test: glium::DepthTest::IfLess,
@@ -646,12 +641,12 @@ fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &m
         }
 }
 
-pub fn get_clicked_pos(layout: &HexLayout, mouse_pos: &mut Point, world_camera: &mut WorldCamera) -> (u32,u32){
+pub fn get_clicked_pos(layout: &HexLayout, mouse_pos: &mut Point, world_camera: &mut WorldCamera) -> OffsetTile{
     //println!("Dimension is: {:#?}", window.inner_size());
     let frac_hex = layout.pixel_to_hex(&mouse_pos);
     let clicked_hex = frac_hex.hex_round();
     
-    let (mut clicked_y, mut clicked_x) = qoffset_from_cube(EVEN,&clicked_hex);                    
+    let (mut clicked_y, mut clicked_x) = qoffset_from_cube_offsets(EVEN,&clicked_hex);                    
     //Make these not hard coded...
     // And move out into seperate function
     clicked_y = 25 - clicked_y as isize;
@@ -676,5 +671,5 @@ pub fn get_clicked_pos(layout: &HexLayout, mouse_pos: &mut Point, world_camera: 
         clicked_y = (clicked_y - (NUM_ROWS) as isize) % NUM_ROWS as isize;
     }  
 
-    return (clicked_y as u32, clicked_x as u32)
+    return OffsetTile::new(clicked_y as u32, clicked_x as u32)
 }
