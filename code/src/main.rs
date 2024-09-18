@@ -9,7 +9,7 @@ use units::unit::BaseUnit;
 use util::{input_handler::{self, InputHandler}, ray_library::ndc_to_intersection};
 use winit::{event_loop::{ControlFlow, EventLoop}, keyboard, window::{Fullscreen, Window}};
 use glium::{glutin::surface::WindowSurface, implement_vertex, uniforms::{MagnifySamplerFilter, MinifySamplerFilter}, Display, Surface, VertexBuffer};
-use world::{draw_functions::{self, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::{qoffset_from_cube, qoffset_to_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
+use world::{draw_functions::{self, World_Attr, World_Pos, BIOME_TO_TEXTURE}, hex::Hex, layout::{HexLayout, Point, EVEN}, offset_coords::{qoffset_from_cube, qoffset_to_cube}, tile::Tile, world_camera::WorldCamera, NUM_COLMS, NUM_ROWS};
 use std::{any::Any, collections::HashMap, mem, os::windows::thread, thread::sleep, time::{Duration, Instant}};
 
 
@@ -275,7 +275,8 @@ fn main() {
     let mut amount_of_hexes = 0;
 
     // Not the most efficient or pretty way but it works..
-    let mut data: Vec<Attr> = vec![];
+    let mut world_pos_data: Vec<World_Pos> = vec![];
+    let mut world_attr_data: Vec<World_Attr> = vec![];
     let left:i32 = -needed_hexes_y/2; //Is possible to multiply by 2, I think that will be nicer.. //However have to make draw_function faster
     let top:i32 = -((needed_hexes_x)); //Is possible to multiply by 2
     let right:i32 = left.abs();
@@ -311,19 +312,22 @@ fn main() {
                 1.0
             };
             //println!("Posistion of this hex {}, {} is {:#?}", q, r,coords);
-            let val = Attr {
+            let val_pos = World_Pos {
                 world_position: [coords.x, coords.y, 0.0],
+            };
+            let val_data = World_Attr{
                 colour: [color/2.0,color, 0.0],
                 tex_offsets: [0.0,0.0,1.0],
             };
             amount_of_hexes += 1;
-            data.push(val);
+            world_pos_data.push(val_pos);
+            world_attr_data.push(val_data);
         }
     }
 
     println!("Layout size is: {:#?}", layout.size);
     println!("Expected layout size is {}w, {}h",layout.get_width(),layout.get_height());
-    println!("data length is: {}", data.len());
+    println!("data length is: {}", world_pos_data.len());
     //println!("data is: {:#?}", data);
     let mut entity_handler: EntityHandler = EntityHandler::new(100, &display);
     entity_handler.create_unit(&mut world_vec, (26,13), UnitType::worker, 0,0,0,0,0);
@@ -335,10 +339,12 @@ fn main() {
 
     // Maybe try to have a double buffer of some kind..
     // See: https://stackoverflow.com/questions/14155615/opengl-updating-vertex-buffer-with-glbufferdata
-    let mut hex_tiles: VertexBuffer<Attr> = glium::vertex::VertexBuffer::dynamic(&display, &data).unwrap();
+    let hex_pos: VertexBuffer<World_Pos> = glium::vertex::VertexBuffer::persistent(&display, &world_pos_data).unwrap();
+    let mut hex_attr: VertexBuffer<World_Attr> = glium::vertex::VertexBuffer::dynamic(&display, &world_attr_data).unwrap();
 
 
-    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
+
+    draw_functions::update_hex_map_colors(&hex_pos,&mut hex_attr, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
 
     let mut mouse_pos: Point = Point{x:0.0,y:0.0};
     let mut mouse_ndc: Vec3 = Vec3::ZERO;
@@ -403,7 +409,7 @@ fn main() {
                     //let clicked_tile = world_vec[(clicked_x) as usize][(clicked_y) as usize];
                     println!("Clicked tile was: {:?}, {:?}", qoffset_to_cube(EVEN, (clicked_x as u32, clicked_y as u32)), (clicked_x, clicked_y));
                     //world_vec[(clicked_x) as usize][(clicked_y) as usize].set_improved(!clicked_tile.get_improved());
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&hex_pos,&mut hex_attr, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                     //println!("Biome is: {} and texture coords are {:#?}", clicked_tile.get_biome(), BIOME_TO_TEXTURE[clicked_tile.get_biome() as usize]);
 
                     //line_renderer.draw_line((0.0,0.0),(mouse_ndc.x,mouse_ndc.y), None);
@@ -414,7 +420,7 @@ fn main() {
                     let _ = input_handler.affected_tiles.drain(..).for_each(|tile: (u32, u32)|{
                         world_vec[tile.0 as usize][tile.1 as usize].set_improved(0);
                     });
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&hex_pos,&mut hex_attr, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
             }
 
@@ -438,19 +444,19 @@ fn main() {
                     //inverse_mat = Mat4::inverse(&(Mat4::from_cols_array_2d(&camera.perspective)*camera.camera_matrix*Mat4::IDENTITY));
                 }else if event.physical_key == keyboard::KeyCode::KeyU && event.state.is_pressed(){
                     world_camera.move_camera(0, 1);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&hex_pos,&mut hex_attr, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyH && event.state.is_pressed(){
                     world_camera.move_camera(2, 0);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&hex_pos,&mut hex_attr, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyJ && event.state.is_pressed(){
                     world_camera.move_camera(0, -1);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&hex_pos,&mut hex_attr, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
                 else if event.physical_key == keyboard::KeyCode::KeyK && event.state.is_pressed(){
                     world_camera.move_camera(-2, 0);
-                    draw_functions::update_hex_map_colors(&mut hex_tiles, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
+                    draw_functions::update_hex_map_colors(&hex_pos,&mut hex_attr, &world_vec,&mut entity_handler, world_camera.offsets(),screen_size);
                 }
                 //Handle WASD
 
@@ -492,7 +498,7 @@ fn main() {
                     // This apparently had a very low impact, dont know why...  
                     //entity_handler.entity_vbo.animate_all_entities((t*8.0).floor()%8.0,&entity_handler.entity_map);
                     //println!("Animating units: {} ms", time_update.elapsed().as_millis());
-                    update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&mut hex_tiles, mouse_ndc, &mut mouse_pos, screen_size, &mut entity_handler); 
+                    update_game_logic(dt, &mut camera, &mut world_camera, &layout, &world_vec, &input_handler,&hex_pos,&mut hex_attr, mouse_ndc, &mut mouse_pos, screen_size, &mut entity_handler); 
                     //println!("Update game: {} ms", time_update.elapsed().as_millis());
                     t += dt;
                     accumulator -= dt;
@@ -533,7 +539,7 @@ fn main() {
                 //println!("Before drawing: {} ms",current_time.elapsed().as_millis());
 
                 target.draw(
-                    (&hex_renderer.vbo, hex_tiles.per_instance().unwrap()),
+                    (&hex_renderer.vbo,hex_pos.per_instance().unwrap(), hex_attr.per_instance().unwrap()),
                     &hex_renderer.indicies,
                     // For different hexes make a texture atlas so a specific tile has a texture in the atlas
                     // Then each instance have different UV coords! 
@@ -593,7 +599,7 @@ fn main() {
 }
 
 
-fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,hex_tiles:&mut VertexBuffer<Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32), entity_handler: &mut EntityHandler){
+fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &mut WorldCamera, layout: &HexLayout, world_vec: &Vec<Vec<Tile>>,input_handler: &InputHandler,hex_pos: &VertexBuffer<World_Pos>,hex_tiles:&mut VertexBuffer<World_Attr>,mouse_ndc:Vec3, mouse_pos: &mut Point, screen_size: (i32,i32), entity_handler: &mut EntityHandler){
     //Update movement (Kanske göra efter allt annat... possibly):
     let mut movement = input_handler.get_movement();
     if movement.length() > 0.0{
@@ -629,7 +635,7 @@ fn update_game_logic(delta_time: f32, camera: &mut RenderCamera,world_camera: &m
             //Gör så kameran bara uppdateras när man faktiskt rör på sig...
             if traveresed_whole_hex{
                 let update_hex_map_timer = Instant::now();
-                draw_functions::update_hex_map_colors(hex_tiles, world_vec,entity_handler, world_camera.offsets(),screen_size);
+                draw_functions::update_hex_map_colors(hex_pos,hex_tiles, world_vec,entity_handler, world_camera.offsets(),screen_size);
                 //println!("Updating hex map took {} ms", update_hex_map_timer.elapsed().as_millis());
             }
             let intersect = ndc_to_intersection(&mouse_ndc,&camera.camera_matrix,camera.get_pos(),&camera.perspective);

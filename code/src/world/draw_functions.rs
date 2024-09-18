@@ -4,6 +4,31 @@ use crate::{entities::{self, entity_vertex_buffer::{EntityPosAttr, EntityVBO}, E
 use super::{tile::Tile, NUM_COLMS, NUM_ROWS};
 
 
+#[derive(Copy, Clone, Debug)]
+pub struct World_Pos {
+    pub world_position: [f32; 3],
+}
+implement_vertex!(World_Pos, world_position);
+
+#[derive(Copy, Clone, Debug)]
+
+pub struct World_Attr {
+    pub colour: [f32; 3], // Changed to array
+    pub tex_offsets: [f32;3], //x offset, y offset, scaling factor          For reading in texture atlas
+}
+implement_vertex!(World_Attr, colour, tex_offsets);
+
+impl World_Attr{
+    pub fn is_zero(&self) -> bool{
+        if self.colour == [0.0,0.0,0.0]{
+            return true
+        }else{
+            return false
+        }
+    }
+}
+
+
 pub fn cantor_2(a:f64,b:f64) -> f64{
     return (1.0/2.0)*(a+b)*(a+b+1.0)+b
 }
@@ -57,13 +82,16 @@ pub const NONE_POS_ATTR: EntityPosAttr = EntityPosAttr{world_position: [10.0,10.
 
 
 // Should also take a hashmap of all units
-pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tiles: &Vec<Vec<Tile>>,entity_handler: &mut EntityHandler,start_tile: (isize,isize), size_screen: (i32,i32)) {
+pub fn update_hex_map_colors(pos_buffer: &glium::VertexBuffer<World_Pos>, attr_buffer: &mut glium::VertexBuffer<World_Attr>, tiles: &Vec<Vec<Tile>>,entity_handler: &mut EntityHandler,start_tile: (isize,isize), size_screen: (i32,i32)) {
     
     //let timer = Instant::now();
 
     //println!("Start tile is: {:#?}", start_tile);
-    let vertex_copy_hex = vertex_buffer.read().unwrap();
-    let mut mapping_hex = vertex_buffer.map_write();
+
+    //Maybe this is slower???
+    let pos_reader = pos_buffer.read().unwrap();
+    let vertex_copy_hex = attr_buffer.read().unwrap();
+    let mut mapping_hex = attr_buffer.map_write();
     let change_units = entity_handler.entity_vbo.vbo.slice_mut(0..entity_handler.entity_vbo.end as usize).unwrap();
 
     let mut write_vec:Vec<EntityPosAttr> = vec![NONE_POS_ATTR;change_units.len()];
@@ -95,7 +123,7 @@ pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tile
         if current_tile.get_occupied() == 1{
             if entity_handler.entity_map.entities.contains_key(&unit_pos)   {
                 write_vec[entity_handler.entity_map.entities.get(&unit_pos).unwrap().get_render_id()] = EntityPosAttr{
-                    world_position: hex.world_position,
+                    world_position: pos_reader.get(i).unwrap().world_position,
                     colour: final_colour,
                 };
             } else{
@@ -106,9 +134,7 @@ pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tile
         }
         
         
-        mapping_hex.set(i,Attr {
-            world_position: hex.world_position, //Move world_posistion out to another buffer. Is unnecessary to have it a part of this one
-                                                //We just move more infromation than we need
+        mapping_hex.set(i,World_Attr {
             colour: final_colour,
             tex_offsets: BIOME_TO_TEXTURE[current_tile.get_biome() as usize],
         });
