@@ -3,7 +3,7 @@ use glium::{glutin::surface::WindowSurface, Display};
 use entity_vertex_buffer::EntityVBO;
 use units::unit::{BaseUnit, UnitType};
 
-use crate::world::tile::Tile;
+use crate::world::{hex::Hex, layout::EVEN, offset_coords::qoffset_to_cube, tile::Tile};
 
 pub mod entity_base;
 pub mod units;
@@ -39,11 +39,51 @@ impl EntityHandler{
         }
     }
 
+    pub fn get_neighbouring_units(&self, neighbor_tiles: Vec<(u32,u32)>) -> Vec<(u32,u32)>{
+        let mut return_vec = vec![];
+
+        for pos in neighbor_tiles{
+            if self.entity_map.entities.contains_key(&pos){
+                return_vec.push(pos);
+            }
+        }
+
+        return return_vec;
+    }
+
+    pub fn get_friendly_neighbouring_units(&self, target_tile: (u32,u32), neighbor_tiles: Vec<(u32,u32)>) -> Vec<(u32,u32)>{
+        let mut return_vec = vec![];
+        let main_unit = self.entity_map.entities.get(&target_tile).unwrap();
+        for pos in neighbor_tiles{
+            let unit = self.entity_map.entities.get(&pos);
+            if unit.is_some(){
+                let unit = unit.unwrap();
+                if unit.get_player() == main_unit.get_player(){
+                    return_vec.push(pos);
+                }
+            }
+        }
+
+        return return_vec;
+    }
+
     pub fn move_unit(&mut self, target_pos: (u32,u32), world:&mut Vec<Vec<Tile>>) -> bool{
+
+        //Check that target_pos is not forbidden tile...
+
+        let target_pos_hex = qoffset_to_cube(EVEN, target_pos);
         match self.selected_entity{
             Some(pos) => {
+                let current_hex = qoffset_to_cube(EVEN, pos);
                 let ents = &mut self.entity_map.entities;
                 let selected_unit = ents.get_mut(&pos).unwrap();
+                //Can not go that far
+                // Why have I made a system that really does not work....
+                // Gonna cry a little bit.
+                let move_distance = current_hex.distance(target_pos_hex);
+                if move_distance > selected_unit.get_movement().into(){
+                    return false;
+                }
                 if world[target_pos.0 as usize][target_pos.1 as usize].get_occupied() == 0{
                     // Remove the unit from the current tile
                     world[pos.0 as usize][pos.1 as usize].set_occupied(0);
@@ -52,7 +92,7 @@ impl EntityHandler{
                     world[target_pos.0 as usize][target_pos.1 as usize].set_occupied(1);
 
                     // Update unit
-                    selected_unit.movement(target_pos);
+                    selected_unit.movement(target_pos, move_distance);
                     let unit_clone = selected_unit.clone();
 
                     // Remove old pos from map
@@ -87,7 +127,7 @@ impl EntityHandler{
 pub trait Entity{
     fn attack(&mut self) -> u16;
     fn damage(&mut self, dmg: u16) -> bool;
-    fn movement(&mut self, target_pos: (u32,u32)) -> ();
+    fn movement(&mut self, target_pos: (u32,u32), distance: u16) -> ();
     fn destroy(&mut self) -> ();
     fn buff(&mut self) -> ();
     fn get_texture(&self) -> [f32;3];
@@ -96,6 +136,7 @@ pub trait Entity{
     fn get_movement(&self) -> u16;
     fn clone(&self) -> Box<dyn Entity>;
     fn get_entity(&self) -> BaseEntity;
+    fn get_player(&self) -> u8;
 }
 
 

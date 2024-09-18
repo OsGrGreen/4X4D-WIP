@@ -86,8 +86,9 @@ impl Entity for BaseUnit{
     }
 
     //Maybe check if movement is legal here...
-    fn movement(&mut self, target_pos: (u32,u32)) -> () {
+    fn movement(&mut self, target_pos: (u32,u32), distance: u16) -> () {
         self.entity.set_pos(target_pos);
+        self.entity.decrement_movement(distance);
     }
 
     fn destroy(&mut self) -> () {
@@ -123,5 +124,9 @@ impl Entity for BaseUnit{
     
     fn get_entity(&self) -> BaseEntity {
         self.entity
+    }
+    
+    fn get_player(&self) -> u8 {
+        self.entity.player_id
     }
 }

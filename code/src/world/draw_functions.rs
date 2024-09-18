@@ -107,7 +107,8 @@ pub fn update_hex_map_colors(vertex_buffer: &mut glium::VertexBuffer<Attr>, tile
         
         
         mapping_hex.set(i,Attr {
-            world_position: hex.world_position,
+            world_position: hex.world_position, //Move world_posistion out to another buffer. Is unnecessary to have it a part of this one
+                                                //We just move more infromation than we need
             colour: final_colour,
             tex_offsets: BIOME_TO_TEXTURE[current_tile.get_biome() as usize],
         });

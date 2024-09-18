@@ -34,6 +34,10 @@ impl BaseEntity{
         self.movement
     }
 
+    pub fn decrement_movement(&mut self, distance: u16){
+        self.movement -= distance;
+    }
+
     pub fn set_pos(&mut self, target_pos: (u32,u32)) -> (){
         self.offset_pos = target_pos;
     }

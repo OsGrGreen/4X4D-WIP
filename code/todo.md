@@ -39,26 +39,31 @@ I think this should minimize the amount of memory needed.
     - [x] Draw texture
     - [x] Change drawn text
     - [ ] Make it possible to remove drawn text efficiently (both space and time)
-- [ ] Make program use multiple threads 
-    - [ ] Make a good division of code
-    - [ ] Decide what kind of multi-thread model to use
 - [x] Fix rendering bugs
 - [ ] Add units
     - [ ] Have some clever way to know when to render units (kinda finished)
     - [x] Make code for automatically adding units to be rendered
     - [ ] Add unit logic
-        - [ ] Selection
-        - [ ] Movement (and range)
+        - [x] Selection
+        - [x] Movement (and range)
         - [ ] Attacking
-        - [ ] Knowing which units are beside you
+        - [x] Knowing which units are beside you
     - [ ] Add creation of units (player input)
 - [ ] World generation
 - [ ] Create a game struct that you modify each frame/turn
 - [ ] Update input logic and so on
 - [ ] Make logic for building cities and buildings in cities
+- [ ] Actually make it turn based
+    - [ ] Make each action, not happen instantly. But get put into a queue.
+    - [ ] Make the queue of actions be handled at the end of a turn.
+    - [ ] Reset unit movement
+    - [ ] Increment all players resources
 - [ ] Make player able to have land
 - [ ] Make menus and stuff
     -  [ ] Settings
+- [ ] Make program use multiple threads 
+    - [ ] Make a good division of code
+    - [ ] Decide what kind of multi-thread model to use
 - [ ] Make loading screens maybe?
 - [ ] Move out constants (like texture atlas and so on) into seperate files for easy modification...
 - [ ] AI

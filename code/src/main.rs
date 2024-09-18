@@ -387,12 +387,15 @@ fn main() {
 
                     // Do not do the update here (add it to the job queue)
                     entity_handler.select((clicked_x,clicked_y));
+
+                    
                     if entity_handler.get_selected_unit().is_some(){
                         let unit = entity_handler.get_selected_unit().unwrap();
                         println!("Clicked pos is: {:#?}, and unit pos is: {:#?}", (clicked_x, clicked_y), unit.get_pos());
                         // qoffset_from_cube(EVEN,&clicked_hex);  
-                        let neighbors = Hex::neighbors_in_range_offset(unit.get_pos(), 2);
+                        let neighbors = Hex::neighbors_in_range_offset(unit.get_pos(), unit.get_movement());
                         for neighbor in neighbors.as_slice(){
+                            //Check that target_pos is not forbidden tile...
                             world_vec[neighbor.0 as usize][neighbor.1 as usize].set_improved(1);
                         }
                         input_handler.affected_tiles = neighbors;

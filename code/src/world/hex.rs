@@ -93,6 +93,23 @@ impl Hex{
         return results;
     }
 
+    pub fn axial_subtract(a: &Hex, b:&Hex) -> Hex{
+        let q = a.q - b.q;
+        let r = a.r - b.r;
+        return Hex::new(q, r, -q-r);
+    }
+    
+    pub fn distance_slow(&self, b: Hex) -> i32{
+        return ((self.get_q()-b.get_q()).abs()).max((self.get_r()-b.get_r()).abs().max((self.get_s()-b.get_s()).abs()))
+    }
+
+    pub fn distance(&self, b: Hex) -> u16{
+        let sub_hex = Hex::axial_subtract(self, &b);
+        return ((sub_hex.q.abs() 
+            + (sub_hex.q + sub_hex.r).abs()
+            + sub_hex.r.abs() ) / 2) as u16;
+    }
+
 }
 
 
