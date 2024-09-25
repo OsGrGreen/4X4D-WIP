@@ -75,6 +75,8 @@ Cities have happines and population as well as upgrades.
 - Food
    - Used to feed and create new population
    - If you have no feed, the population will get angry and pregress will stagnate.
+   - Population will die
+   - (Maybe it is only this resource that will be scarce)
 - Wood (Should be able to be saved in some way, since the name of the game is saving stuff)
    - Used mainly for creating buildings
    - Also used by population (to keep them baseline happy)
@@ -164,5 +166,17 @@ An entity can:
 ### Rebellions
 
 ## Religion/Science
+
+### Tech tree:
+
+The tech tree is meant to be quite similiar to the one on [[solium infernum]], with a player having to actively decide which god they want to follow. Like there is a middle point and branches. The goal is seven different gods, together with one option of not following any god. Each god will be tied to a certain game mechanic, giving buffs, resources and victory conditions in that area. 
+
+The goal is for the techs to provide the specialization of a faction, while the factions themselves should be able to follow any god (at least in theory). 
+
+At any point in the game, with or without having previous techs, a player can choose to abandon their god gaining a large amount of resources now, but losing out in the long run (it should not be best practice to do this, however can serve as a last resort for a losing player). 
+
+### Progression:
+
+Progression in the tech tree is gained by doing specific rituals, with each tech requiring a different ritual. These rituals can sacrifice food, resources, population or even cities. The further you progress through the tech tree the more "expensive" the rituals will become. 
 
 
